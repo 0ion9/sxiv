@@ -111,6 +111,9 @@ of small previews is displayed, making it easy to choose an image to open.
     {,}          Decrease/increase gamma correction by [count] steps
     Ctrl-g       Reset gamma correction
 
+    KEY	 Execute $XDG_CONFIG_HOME/sxiv/exec/key-handler with
+                 KEY and the path of the current image as arguments.
+
 *Thumbnail mode:*
 
     h,j,k,l      Move selection left/down/up/right [count] times (also with
