@@ -431,13 +431,14 @@ bool ci_slideshow(arg_t _)
 	if (prefix > 0) {
 		img.ss.on = true;
 		img.ss.delay = prefix;
-		set_timeout(slideshow, img.ss.delay * 1000, true);
+		set_timeout(slideshow, img.ss.delay, true);
 	} else if (img.ss.on) {
 		img.ss.on = false;
 		reset_timeout(slideshow);
 	} else {
 		img.ss.on = true;
 	}
+
 	return true;
 }
 

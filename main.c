@@ -397,7 +397,7 @@ void update_info(void)
 	} else {
 		bar_put(r, "%s", mark);
 		if (img.ss.on)
-			bar_put(r, "%ds | ", img.ss.delay);
+                        bar_put(r, "%dms | ", img.ss.delay);
 		if (img.gamma != 0)
 			bar_put(r, "G%+d | ", img.gamma);
 		bar_put(r, "%3d%% | ", (int) (img.zoom * 100.0));
@@ -428,7 +428,7 @@ void redraw(void)
 	if (mode == MODE_IMAGE) {
 		img_render(&img);
 		if (img.ss.on) {
-			t = img.ss.delay * 1000;
+			t = img.ss.delay;
 			if (img.multi.cnt > 0 && img.multi.animate)
 				t = MAX(t, img.multi.length);
 			set_timeout(slideshow, t, false);
