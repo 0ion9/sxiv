@@ -32,6 +32,7 @@
 #include "config.h"
 
 void cleanup(void);
+void shift_file(int, int);
 void remove_file(int, bool);
 void load_image(int);
 void open_info(void);
@@ -141,6 +142,23 @@ bool cg_remove_image(arg_t _)
 		load_image(fileidx);
 	else
 		tns.dirty = true;
+	return true;
+}
+
+bool cg_reorder_image(arg_t a)
+{
+	long n = (long)a;
+	if (prefix != 0) {
+		if (n < 0)
+			n = -prefix;
+		else
+			n = prefix;
+	}
+	shift_file(fileidx, n);
+	tns.dirty = true;
+	if (mode == MODE_IMAGE) {
+		load_image(fileidx);
+	}
 	return true;
 }
 

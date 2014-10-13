@@ -162,6 +162,50 @@ void check_add_file(char *filename, bool given)
 	fileidx++;
 }
 
+void shift_file(int n, int offset)
+{
+	fileinfo_t info;
+	thumb_t thumb;
+	int final_location;
+	int actual_offset;
+	int absolute_offset;
+
+	final_location = n + offset;
+	if (final_location < 0)
+		final_location = 0;
+	if (final_location > (filecnt - 1))
+		final_location = filecnt - 1;
+
+	actual_offset = final_location - n;
+	if (actual_offset == 0)
+		return;
+	absolute_offset = actual_offset;
+	if (actual_offset < 0)
+		absolute_offset = actual_offset * -1;
+	memcpy(&info, files + n, sizeof(fileinfo_t));
+
+	if (actual_offset < 0) {
+		memmove(files + final_location + 1, files + final_location, absolute_offset * sizeof(*files));
+		memcpy(files + final_location, &info, sizeof(*files));
+		if (tns.thumbs != NULL) {
+			memcpy(&thumb, tns.thumbs + n, sizeof(*tns.thumbs));
+			memmove(tns.thumbs + final_location + 1, tns.thumbs + final_location, absolute_offset * sizeof(*tns.thumbs));
+			memcpy(tns.thumbs + final_location, &thumb, sizeof(*tns.thumbs));
+		}
+	} else {
+		memmove(files + n, files + n + 1, absolute_offset * sizeof(*files));
+		memcpy(files + final_location, &info, sizeof(*files));
+		if (tns.thumbs != NULL) {
+			memcpy(&thumb, tns.thumbs + n, sizeof(*tns.thumbs));
+			memmove(tns.thumbs + n, tns.thumbs + n + 1, absolute_offset * sizeof(*tns.thumbs));
+			memcpy(tns.thumbs + final_location, &thumb, sizeof(*tns.thumbs));
+		}
+	}
+
+	if (alternate == n)
+		alternate = final_location;
+}
+
 void remove_file(int n, bool manual)
 {
 	if (n < 0 || n >= filecnt)
