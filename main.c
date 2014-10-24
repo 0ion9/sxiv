@@ -437,6 +437,8 @@ void update_info(void)
 		} else {
 			ow_info = true;
 		}
+		if (strlen(mark) > 0)
+			bar_put(r, "%d", markcnt);
 		bar_put(r, "%s%0*d/%d", mark, fw, fileidx + 1, filecnt);
 	} else {
 		bar_put(r, "%s", mark);
