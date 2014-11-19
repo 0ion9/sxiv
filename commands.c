@@ -329,6 +329,17 @@ bool ci_toggle_animation(arg_t _)
 	return dirty;
 }
 
+bool ci_toggle_mouse_pos(arg_t a)
+{
+	if (img.show_mouse_pos) {
+		img.show_mouse_pos = false;
+	} else {
+		img.show_mouse_pos = true;
+	}
+	img.dirty = true;
+	return true;
+}
+
 bool ci_scroll(arg_t dir)
 {
 	return img_pan(&img, dir, prefix);

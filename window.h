@@ -84,6 +84,10 @@ typedef struct {
 		unsigned long bgcol;
 		unsigned long fgcol;
 	} bar;
+	struct {
+		int x;
+		int y;
+	} mouse;
 } win_t;
 
 extern Atom atoms[ATOM_COUNT];
@@ -99,6 +103,7 @@ void win_toggle_bar(win_t*);
 
 void win_clear(win_t*);
 void win_draw(win_t*);
+void win_draw_bar(win_t*);
 void win_draw_rect(win_t*, int, int, int, int, bool, int, unsigned long);
 
 int win_textwidth(const char*, unsigned int, bool);

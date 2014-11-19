@@ -68,6 +68,7 @@ void img_init(img_t *img, win_t *win)
 	img->dirty = false;
 	img->aa = ANTI_ALIAS;
 	img->alpha = ALPHA_LAYER;
+	img->show_mouse_pos = options->show_mouse_pos;
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
 	img->multi.length = 0;

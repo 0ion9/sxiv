@@ -446,6 +446,12 @@ void update_info(void)
                         bar_put(r, "%dms | ", img.ss.delay);
 		if (img.gamma != 0)
 			bar_put(r, "G%+d | ", img.gamma);
+		if (img.win->mouse.x >= 0 && \
+		    img.win->mouse.x < img.w && \
+		    img.win->mouse.y >= 0 && \
+		    img.win->mouse.y < img.h &&
+		    img.show_mouse_pos)
+			bar_put(r, "(%d, %d) | ", img.win->mouse.x, img.win->mouse.y);
 		bar_put(r, "%3d%% | ", (int) (img.zoom * 100.0));
 		if (img.multi.cnt > 0) {
 			for (fn = 0, i = img.multi.cnt; i > 0; fn++, i /= 10);
@@ -831,6 +837,11 @@ void run(void)
 				break;
 			case MotionNotify:
 				if (mode == MODE_IMAGE) {
+					img.win->mouse.x=(int)((ev.xmotion.x-img.x)/img.zoom);
+					img.win->mouse.y=(int)((ev.xmotion.y-img.y)/img.zoom);
+					update_info();
+					win_draw_bar(&win);
+					XClearWindow(win.env.dpy, win.xwin);
 					win_set_cursor(&win, CURSOR_ARROW);
 					set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
 				}
