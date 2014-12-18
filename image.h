@@ -54,7 +54,7 @@ typedef struct {
 	bool dirty;
 	bool aa;
 	bool alpha;
-	bool show_mouse_pos;
+	int show_mouse_pos;
 
 	Imlib_Color_Modifier cmod;
 	int gamma;

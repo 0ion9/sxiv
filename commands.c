@@ -331,10 +331,12 @@ bool ci_toggle_animation(arg_t _)
 
 bool ci_toggle_mouse_pos(arg_t a)
 {
-	if (img.show_mouse_pos) {
-		img.show_mouse_pos = false;
+	if (img.show_mouse_pos == 0) {
+		img.show_mouse_pos = 1;
+	} else if (img.show_mouse_pos == 1) {
+		img.show_mouse_pos = 2;
 	} else {
-		img.show_mouse_pos = true;
+		img.show_mouse_pos = 0;
 	}
 	img.dirty = true;
 	return true;

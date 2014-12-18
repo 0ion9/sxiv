@@ -58,7 +58,7 @@ void parse_options(int argc, char **argv)
 	_options.animate = false;
 	_options.gamma = 0;
 	_options.slideshow = 0;
-	_options.show_mouse_pos = false;
+	_options.show_mouse_pos = 0;
 
 	_options.fullscreen = false;
 	_options.hide_bar = false;
@@ -69,7 +69,7 @@ void parse_options(int argc, char **argv)
 	_options.thumb_mode = false;
 	_options.clean_cache = false;
 
-	while ((opt = getopt(argc, argv, "abcfG:g:himn:N:oqrS:s:tvZz:")) != -1) {
+	while ((opt = getopt(argc, argv, "abcfG:g:himMn:N:oqrS:s:tvZz:")) != -1) {
 		switch (opt) {
 			case '?':
 				print_usage();
@@ -104,7 +104,10 @@ void parse_options(int argc, char **argv)
 				_options.from_stdin = true;
 				break;
 			case 'm':
-				_options.show_mouse_pos = true;
+				_options.show_mouse_pos = 1;
+				break;
+			case 'M':
+				_options.show_mouse_pos = 2;
 				break;
 			case 'n':
 				n = strtol(optarg, &end, 0);

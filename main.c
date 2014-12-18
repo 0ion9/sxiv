@@ -449,9 +449,16 @@ void update_info(void)
 		if (img.win->mouse.x >= 0 && \
 		    img.win->mouse.x < img.w && \
 		    img.win->mouse.y >= 0 && \
-		    img.win->mouse.y < img.h &&
-		    img.show_mouse_pos)
-			bar_put(r, "(%d, %d) | ", img.win->mouse.x, img.win->mouse.y);
+		    img.win->mouse.y < img.h && \
+		    img.show_mouse_pos > 0) {
+			if (img.show_mouse_pos == 1){
+				bar_put(r, "(%d, %d) | ", img.win->mouse.x, img.win->mouse.y);
+			} else {
+				bar_put(r, "(%.1f%%, %.1f%%) | ", \
+					((float)img.win->mouse.x * 100) / ((float)img.w), \
+					((float)img.win->mouse.y * 100) / ((float)img.h));
+			}
+		}
 		bar_put(r, "%3d%% | ", (int) (img.zoom * 100.0));
 		if (img.multi.cnt > 0) {
 			for (fn = 0, i = img.multi.cnt; i > 0; fn++, i /= 10);
