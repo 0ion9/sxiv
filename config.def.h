@@ -10,7 +10,7 @@ enum {
  * (see X(7) section "FONT NAMES" for valid values)
  */
 static const char * const BAR_FONT = // "-misc-fixed-*-*-*-*-12-*-*-*-*-*-*-*";
-"-misc-fixedsys excelsior 3.01 l2-*-*-*-*-12-*-*-*-*-*-*-*";
+"-*-proggytiny-*-*-*-*-10-*-*-*-*-*-*-*";
 
 /* colors:
  * (see X(7) section "COLOR NAMES" for valid values)
@@ -33,8 +33,9 @@ static const float zoom_levels[] = {
 	1600.0, 2400.0
 };
 
-/* default slideshow delay (in sec, overwritten via -S option): */
-enum { SLIDESHOW_DELAY = 5 };
+/* default slideshow delay (in msec, overwritten via -S option): */
+/* this is 90 seconds / 1m30s */
+enum { SLIDESHOW_DELAY = 90000 };
 
 /* default settings for multi-frame gif images: */
 //enum {
@@ -157,11 +158,9 @@ static const keymap_t keys[] = {
 	{ 0,            XK_s,             i_slideshow,          None },
 	// { 0,            XK_F6,            i_slideshow,          None },
 
-	{ 0,            XK_F8,            i_toggle_mouse_pos,   None },
+	{ ControlMask,  XK_F9,            i_toggle_mouse_pos,   None },
 	{ 0,            XK_F9,            i_toggle_antialias,   None },
 	{ ShiftMask,    XK_F9,            i_toggle_alpha,      None },
-
-
 
 };
 
