@@ -443,7 +443,7 @@ void update_info(void)
 	} else {
 		bar_put(r, "%s", mark);
 		if (img.ss.on)
-                        bar_put(r, "%dms | ", img.ss.delay);
+                        bar_put(r, "%.1fs | ", ((float)img.ss.delay) / 1000.);
 		if (img.gamma != 0)
 			bar_put(r, "G%+d | ", img.gamma);
 		if (img.win->mouse.x >= 0 && \
