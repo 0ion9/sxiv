@@ -442,8 +442,15 @@ void update_info(void)
 		bar_put(r, "%s%0*d/%d", mark, fw, fileidx + 1, filecnt);
 	} else {
 		bar_put(r, "%s", mark);
-		if (img.ss.on)
-                        bar_put(r, "%.1fs | ", ((float)img.ss.delay) / 1000.);
+		if (img.ss.on) {
+			if (img.ss.delay <= 90000) {
+	                        bar_put(r, "%.1fs | ", ((float)img.ss.delay) / 1000.);
+	                } else if (img.ss.delay <= (90 * 60 * 1000)) {
+	                        bar_put(r, "%.1fm | ", ((float)img.ss.delay) / (60. * 1000.));
+	                } else {
+	                        bar_put(r, "%.2fh | ", ((float)img.ss.delay) / (60. * 60 * 1000.));
+	                }
+                }
 		if (img.gamma != 0)
 			bar_put(r, "G%+d | ", img.gamma);
 		if (img.win->mouse.x >= 0 && \

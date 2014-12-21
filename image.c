@@ -78,7 +78,7 @@ void img_init(img_t *img, win_t *win)
 	img->gamma = MIN(MAX(options->gamma, -GAMMA_RANGE), GAMMA_RANGE);
 
 	img->ss.on = options->slideshow > 0;
-	img->ss.delay = options->slideshow > 0 ? options->slideshow : SLIDESHOW_DELAY;
+	img->ss.delay = options->slideshow > 0 ? options->slideshow * 100 : SLIDESHOW_DELAY * 100;
 }
 
 #if HAVE_LIBEXIF

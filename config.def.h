@@ -35,7 +35,7 @@ static const float zoom_levels[] = {
 
 /* default slideshow delay (in msec, overwritten via -S option): */
 /* this is 90 seconds / 1m30s */
-enum { SLIDESHOW_DELAY = 90000 };
+enum { SLIDESHOW_DELAY = 900 };
 
 /* default settings for multi-frame gif images: */
 //enum {

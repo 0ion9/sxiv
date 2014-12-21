@@ -461,7 +461,7 @@ bool ci_slideshow(arg_t _)
 {
 	if (prefix > 0) {
 		img.ss.on = true;
-		img.ss.delay = prefix;
+		img.ss.delay = prefix * 100; // specified in tenths of seconds
 		set_timeout(slideshow, img.ss.delay, true);
 	} else if (img.ss.on) {
 		img.ss.on = false;
