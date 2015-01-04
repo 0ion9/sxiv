@@ -104,10 +104,13 @@ static const keymap_t keys[] = {
 	{ 0,            XK_braceright,    g_change_gamma,       +1 },
 	{ 0,            XK_G,             g_change_gamma,        0 },
 	// this one doesn't seem to work. Does it need to be KP_4 instead of KP_Left?
-	{ 0          ,  XK_KP_4,          g_first,             None },
+	{ 0          ,  XK_KP_4,          g_first,              None },
 	{ Mod1Mask   ,  XK_Left,          g_reorder_image,      -9999999 },
 	{ Mod1Mask   ,  XK_Right,         g_reorder_image,      9999999 },
-	{ 0,            XK_KP_Begin,      g_n_or_last,           None },
+	{ Mod1Mask|ControlMask, XK_Left, g_reorder_marked_images,  -1 },
+	{ Mod1Mask|ControlMask, XK_Right, g_reorder_marked_images, 1 },
+	{ 0,            XK_KP_Begin,      g_n_or_last,          None },
+
 // these don't work, after the animation system change.
 //	{ ControlMask,  XK_n,             i_navigate_frame,     +1 },
 //	{ ControlMask,  XK_p,             i_navigate_frame,     -1 },
