@@ -33,6 +33,7 @@
 
 void cleanup(void);
 void shift_file(int, int);
+void shift_marked_files(int);
 void remove_file(int, bool);
 void load_image(int);
 void open_info(void);
@@ -145,6 +146,7 @@ bool cg_remove_image(arg_t _)
 	return true;
 }
 
+
 bool cg_reorder_image(arg_t a)
 {
 	long n = (long)a;
@@ -156,6 +158,20 @@ bool cg_reorder_image(arg_t a)
 	}
 	shift_file(fileidx, n);
 	tns.dirty = true;
+	if (mode == MODE_IMAGE) {
+		load_image(fileidx);
+	}
+	return true;
+}
+
+bool cg_reorder_marked_images(arg_t dir)
+{
+	// Moves all marked images as a block to either the start or end of filelist.
+	if (markcnt == 0)
+		return cg_reorder_image(a);
+	shift_marked_files((long)dir);
+	tns.dirty = true;
+
 	if (mode == MODE_IMAGE) {
 		load_image(fileidx);
 	}

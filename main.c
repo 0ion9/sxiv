@@ -162,6 +162,72 @@ void check_add_file(char *filename, bool given)
 	fileidx++;
 }
 
+void shift_marked_files(int direction)
+{
+	// shift marked files to either the start (-1) or end (1) of the list.
+
+	fileinfo_t *infobuf;
+	thumb_t *thumbbuf;
+	int i, output_index;
+	bool first, second;
+
+	warn("Called shift_marked_files()");
+
+	if (direction == 0)
+		return;
+
+	if (markcnt == 0)
+		return;
+
+	warn("sizes: f %d t %d", sizeof(fileinfo_t), sizeof(thumb_t));
+	infobuf = (fileinfo_t *) s_malloc(sizeof(fileinfo_t) * filecnt);
+	thumbbuf = (thumb_t *) s_malloc(sizeof(thumb_t) * filecnt);
+	// super inefficient. We should keep around the buffers instead.
+
+
+	if (direction < 0){
+		first=true;
+		second=false;
+	}
+	else{
+		first=false;
+		second=true;
+	}
+
+	output_index = 0;
+
+	for (i=0; i<filecnt; i++){
+		if ((files + i)->marked == first){
+			memcpy(infobuf + output_index, files + i, sizeof(fileinfo_t));
+			memcpy(thumbbuf + output_index, tns.thumbs + i, sizeof(thumb_t));
+			output_index++;
+		}
+	}
+
+	for (i=0; i<filecnt; i++){
+		if ((files + i)->marked == second){
+			memcpy(infobuf + output_index, files + i, sizeof(fileinfo_t));
+			memcpy(thumbbuf + output_index, tns.thumbs + i, sizeof(thumb_t));
+			output_index++;
+		}
+	}
+
+	if (output_index != filecnt){
+		fprintf(stderr,
+			"sxiv:shift_marked_files() final output_index looks wrong (%d, expected %d). Terminating.\n",
+			output_index, filecnt);
+		cleanup();
+		exit(EXIT_FAILURE);
+	}
+
+	memcpy(tns.thumbs, thumbbuf, sizeof(thumb_t) * filecnt);
+	memcpy(files, infobuf, sizeof(fileinfo_t) * filecnt);
+
+	free(infobuf);
+	free(thumbbuf);
+
+}
+
 void shift_file(int n, int offset)
 {
 	fileinfo_t info;
