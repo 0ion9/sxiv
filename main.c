@@ -169,9 +169,7 @@ void shift_marked_files(int direction)
 	fileinfo_t *infobuf;
 	thumb_t *thumbbuf;
 	int i, output_index;
-	bool first, second;
-
-	warn("Called shift_marked_files()");
+	fileflags_t first, second;
 
 	if (direction == 0)
 		return;
@@ -179,6 +177,9 @@ void shift_marked_files(int direction)
 	if (markcnt == 0)
 		return;
 
+        // at last check, this returned 32, 24
+        // meaning that for a filelist of 1000 items, 32000+24000 == 46000 bytes are allocated and freed each time
+        // that shift_marked_files() is called.
 	warn("sizes: f %d t %d", sizeof(fileinfo_t), sizeof(thumb_t));
 	infobuf = (fileinfo_t *) s_malloc(sizeof(fileinfo_t) * filecnt);
 	thumbbuf = (thumb_t *) s_malloc(sizeof(thumb_t) * filecnt);
@@ -186,18 +187,18 @@ void shift_marked_files(int direction)
 
 
 	if (direction < 0){
-		first=true;
-		second=false;
+		first=FF_MARK;
+		second=0;
 	}
 	else{
-		first=false;
-		second=true;
+		first=0;
+		second=FF_MARK;
 	}
 
 	output_index = 0;
 
 	for (i=0; i<filecnt; i++){
-		if ((files + i)->marked == first){
+		if (((files + i)->flags & FF_MARK) == first){
 			memcpy(infobuf + output_index, files + i, sizeof(fileinfo_t));
 			memcpy(thumbbuf + output_index, tns.thumbs + i, sizeof(thumb_t));
 			output_index++;
@@ -205,7 +206,7 @@ void shift_marked_files(int direction)
 	}
 
 	for (i=0; i<filecnt; i++){
-		if ((files + i)->marked == second){
+		if (((files + i)->flags & FF_MARK) == second){
 			memcpy(infobuf + output_index, files + i, sizeof(fileinfo_t));
 			memcpy(thumbbuf + output_index, tns.thumbs + i, sizeof(thumb_t));
 			output_index++;

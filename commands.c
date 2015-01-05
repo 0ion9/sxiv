@@ -164,12 +164,23 @@ bool cg_reorder_image(arg_t a)
 	return true;
 }
 
-bool cg_reorder_marked_images(arg_t dir)
+bool cg_reorder_marked_images(arg_t _dir)
 {
+	long dir = (long)_dir;
 	// Moves all marked images as a block to either the start or end of filelist.
 	if (markcnt == 0)
-		return cg_reorder_image(a);
-	shift_marked_files((long)dir);
+	{
+		files[fileidx].flags = files[fileidx].flags | FF_MARK;
+		markcnt++;
+		shift_marked_files(dir);
+		if (dir == 1)
+			files[filecnt - 1].flags = files[filecnt - 1].flags ^ FF_MARK;
+		else
+			files[0].flags = files[0].flags ^ FF_MARK;
+		markcnt--;
+	} else {
+		shift_marked_files(dir);
+	}
 	tns.dirty = true;
 
 	if (mode == MODE_IMAGE) {
