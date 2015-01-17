@@ -637,8 +637,10 @@ bool tns_zoom(tns_t *tns, int d)
 
 	tns->bw = ((thumb_sizes[tns->zl] - 1) >> 5) + 1;
 	tns->bw = MIN(tns->bw, 4);
-	tns->dim = thumb_sizes[tns->zl] + 2 * tns->bw + 6;
+	tns->dim = ((thumb_sizes[tns->zl] * thumbnail_zoom_levels[oldzmultl]) / 100) + 2 * tns->bw + 6;
 	if (oldzl == (ARRLEN(thumb_sizes) - 1)){
+		int mindim = MIN(tns->win->w, tns->win->h);
+		int thisdim;
 		if (tns->zl == oldzl){
 			tns->zmultl += -(d < 0) + (d > 0);
 			tns->zmultl = MAX(tns->zmultl, 0);
@@ -647,8 +649,13 @@ bool tns_zoom(tns_t *tns, int d)
 			/* zooming out to a smaller thumb */
 			tns->zmultl = 0;
 		}
-		tns->dim = ((thumb_sizes[tns->zl] * thumbnail_zoom_levels[tns->zmultl]) / 100) \
+
+		thisdim = ((thumb_sizes[tns->zl] * thumbnail_zoom_levels[tns->zmultl]) / 100) \
 		            + 2 * tns->bw + 6;
+		if (thisdim >= mindim && tns->zl == oldzl)
+			tns->zmultl = oldzmultl;
+		else
+			tns->dim = thisdim;
 	}
 	if (tns->zl != oldzl) {
 		for (i = 0; i < *tns->cnt; i++)
