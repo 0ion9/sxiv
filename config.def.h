@@ -66,6 +66,18 @@ static const bool ALPHA_LAYER = false;
 /* thumbnail sizes in pixels (width == height): */
 static const int thumb_sizes[] = { 32, 64, 80, 144, 192 };
 
+/* zoom levels usable when zooming >= max thumbnail size
+   leave 100.0 as-is, unless you want to alter the base zoom of thumbnails when <= max thumbnail size.
+
+   Note that unlike zoom_levels, values are -integers-.
+*/
+static const int thumbnail_zoom_levels[] = { 100, 200, 250, 300, 400 };
+
+/* pixelize if thumbnail zoom factor > this value.
+   values <= 100 have no effect.
+ */
+static const int THUMBNAIL_PIXELIZE_AT = 201;
+
 #endif
 #ifdef _MAPPINGS_CONFIG
 

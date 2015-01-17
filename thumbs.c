@@ -176,6 +176,7 @@ void tns_init(tns_t *tns, fileinfo_t *files, const int *cnt, int *sel,
 	tns->dirty = false;
 
 	tns->zl = 0;
+	tns->zmultl = 0;
 	tns_zoom(tns, 1);
 
 	if ((homedir = getenv("XDG_CACHE_HOME")) == NULL || homedir[0] == '\0') {
@@ -424,11 +425,15 @@ void tns_check_view(tns_t *tns, bool scrolled)
 	}
 }
 
+
+
 void tns_render(tns_t *tns)
 {
 	thumb_t *t;
 	win_t *win;
 	int i, cnt, r, x, y;
+	char oldaa;
+	int zoom;
 
 	if (tns == NULL || tns->thumbs == NULL || tns->win == NULL)
 		return;
@@ -439,6 +444,7 @@ void tns_render(tns_t *tns)
 	win_clear(win);
 	imlib_context_set_drawable(win->buf.pm);
 
+	zoom = thumbnail_zoom_levels[tns->zmultl];
 	tns->cols = MAX(1, win->w / tns->dim);
 	tns->rows = MAX(1, win->h / tns->dim);
 
@@ -466,13 +472,19 @@ void tns_render(tns_t *tns)
 	tns->r_first = tns->first;
 	tns->r_end = tns->end;
 
+	oldaa = imlib_context_get_anti_alias();
+	if (thumbnail_zoom_levels[tns->zmultl] > THUMBNAIL_PIXELIZE_AT)
+		imlib_context_set_anti_alias(0);
 	for (i = tns->first; i < tns->end; i++) {
 		t = &tns->thumbs[i];
 		if (t->im != NULL) {
-			t->x = x + (thumb_sizes[tns->zl] - t->w) / 2;
-			t->y = y + (thumb_sizes[tns->zl] - t->h) / 2;
+			t->x = x + (((thumb_sizes[tns->zl] * zoom) / 100) \
+			         - ((t->w * zoom) / 100)) / 2;
+			t->y = y + (((thumb_sizes[tns->zl] * zoom) / 100) \
+			         - ((t->h * zoom) / 100)) / 2;
 			imlib_context_set_image(t->im);
-			imlib_render_image_on_drawable_at_size(t->x, t->y, t->w, t->h);
+			imlib_render_image_on_drawable_at_size(t->x, t->y,
+				(t->w * zoom) / 100, (t->h * zoom) / 100);
 			if (tns->files[i].flags & FF_MARK)
 				tns_mark(tns, i, true);
 		} else {
@@ -485,6 +497,7 @@ void tns_render(tns_t *tns)
 			x += tns->dim;
 		}
 	}
+	imlib_context_set_anti_alias(oldaa);
 	tns->dirty = false;
 	tns_highlight(tns, *tns->sel, true);
 }
@@ -498,7 +511,12 @@ void tns_mark(tns_t *tns, int n, bool mark)
 		win_t *win = tns->win;
 		thumb_t *t = &tns->thumbs[n];
 		unsigned long col = win->fullscreen ? win->fscol : win->bgcol;
-		int x = t->x + t->w, y = t->y + t->h;
+		int x,y;
+		int zoom;
+
+		zoom = thumbnail_zoom_levels[tns->zmultl];
+		x = t->x + ((t->w * zoom) / 100);
+		y = t->y + ((t->h * zoom) / 100);
 
 		win_draw_rect(win, x - 1, y + 1, 1, tns->bw, true, 1, col);
 		win_draw_rect(win, x + 1, y - 1, tns->bw, 1, true, 1, col);
@@ -523,13 +541,16 @@ void tns_highlight(tns_t *tns, int n, bool hl)
 		thumb_t *t = &tns->thumbs[n];
 		unsigned long col;
 		int oxy = (tns->bw + 1) / 2 + 1, owh = tns->bw + 2;
+		int zoom;
+		zoom = thumbnail_zoom_levels[tns->zmultl];
 
 		if (hl)
 			col = win->selcol;
 		else
 			col = win->fullscreen ? win->fscol : win->bgcol;
 
-		win_draw_rect(win, t->x - oxy, t->y - oxy, t->w + owh, t->h + owh,
+		win_draw_rect(win, t->x - oxy, t->y - oxy, 
+		              ((t->w * zoom) / 100) + owh, ((t->h * zoom) / 100) + owh,
 		              false, tns->bw, col);
 
 		if (tns->files[n].flags & FF_MARK)
@@ -601,26 +622,42 @@ bool tns_scroll(tns_t *tns, direction_t dir, bool screen)
 
 bool tns_zoom(tns_t *tns, int d)
 {
-	int i, oldzl;
+	int i, oldzl, oldzmultl;
 
 	if (tns == NULL || tns->thumbs == NULL)
 		return false;
 
 	oldzl = tns->zl;
-	tns->zl += -(d < 0) + (d > 0);
-	tns->zl = MAX(tns->zl, 0);
-	tns->zl = MIN(tns->zl, ARRLEN(thumb_sizes)-1);
+	oldzmultl = tns->zmultl;
+	if (oldzmultl == 0){
+		tns->zl += -(d < 0) + (d > 0);
+		tns->zl = MAX(tns->zl, 0);
+		tns->zl = MIN(tns->zl, ARRLEN(thumb_sizes)-1);
+	}
 
 	tns->bw = ((thumb_sizes[tns->zl] - 1) >> 5) + 1;
 	tns->bw = MIN(tns->bw, 4);
 	tns->dim = thumb_sizes[tns->zl] + 2 * tns->bw + 6;
-
+	if (oldzl == (ARRLEN(thumb_sizes) - 1)){
+		if (tns->zl == oldzl){
+			tns->zmultl += -(d < 0) + (d > 0);
+			tns->zmultl = MAX(tns->zmultl, 0);
+			tns->zmultl = MIN(tns->zmultl, ARRLEN(thumbnail_zoom_levels)-1);
+		} else {
+			/* zooming out to a smaller thumb */
+			tns->zmultl = 0;
+		}
+		tns->dim = ((thumb_sizes[tns->zl] * thumbnail_zoom_levels[tns->zmultl]) / 100) \
+		            + 2 * tns->bw + 6;
+	}
 	if (tns->zl != oldzl) {
 		for (i = 0; i < *tns->cnt; i++)
 			tns_unload(tns, i);
 		tns->dirty = true;
+	} else if (tns->zmultl != oldzmultl){
+		tns->dirty = true;
 	}
-	return tns->zl != oldzl;
+	return ((tns->zl != oldzl) | (tns->zmultl != oldzmultl));
 }
 
 int tns_translate(tns_t *tns, int x, int y)

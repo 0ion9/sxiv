@@ -49,6 +49,7 @@ typedef struct {
 	int cols;
 	int rows;
 	int zl;
+	int zmultl;
 	int bw;
 	int dim;
 
