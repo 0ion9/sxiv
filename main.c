@@ -78,6 +78,7 @@ int markcnt;
 
 int prefix;
 bool extprefix;
+bool inputting_prefix;
 
 bool resized = false;
 
@@ -736,8 +737,14 @@ void on_keypress(XKeyEvent *kev)
 
 	if (IsModifierKey(ksym))
 		return;
-	if ((ksym == XK_Escape && MODMASK(kev->state) == 0) ||
-		  (key >= '0' && key <= '9'))
+
+	if (ksym == XK_Escape && MODMASK(kev->state) == 0){
+		inputting_prefix = true;
+		prefix = 0;
+		return;
+	}
+
+	if ((inputting_prefix == true) && (key >= '0' && key <= '9'))
 	{
 		/* number prefix for commands */
 		prefix = prefix * 10 + (int) (key - '0');
@@ -760,6 +767,7 @@ void on_keypress(XKeyEvent *kev)
 		redraw();
     
 	prefix = 0;
+	inputting_prefix = 0;
 }
 
 void on_buttonpress(XButtonEvent *bev)
@@ -808,6 +816,7 @@ void on_buttonpress(XButtonEvent *bev)
 					}
 				}
 				break;
+			case Button2:
 			case Button3:
 				if ((sel = tns_translate(&tns, bev->x, bev->y)) >= 0) {
 					files[sel].flags ^= FF_MARK;
