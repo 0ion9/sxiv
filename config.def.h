@@ -64,7 +64,7 @@ static const bool ALPHA_LAYER = false;
 #ifdef _THUMBS_CONFIG
 
 /* thumbnail sizes in pixels (width == height): */
-static const int thumb_sizes[] = { 32, 64, 80, 144, 192 };
+static const int thumb_sizes[] = { 32, 64, 80, 144, 192, 384, 480, 576, 768};
 
 /* zoom levels usable when zooming >= max thumbnail size
    leave 100.0 as-is, unless you want to alter the base zoom of thumbnails when <= max thumbnail size.
