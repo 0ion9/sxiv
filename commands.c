@@ -471,9 +471,9 @@ bool ci_flip(arg_t dir)
 	return true;
 }
 
-bool ci_toggle_antialias(arg_t _)
+bool ci_cycle_antialias(arg_t _)
 {
-	img_toggle_antialias(&img);
+	img_cycle_antialias(&img);
 	return true;
 }
 

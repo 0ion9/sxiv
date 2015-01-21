@@ -1,3 +1,5 @@
+#define PIXELIZE_AT 200
+
 #ifdef _WINDOW_CONFIG
 
 /* default window dimensions (overwritten via -g option): */
@@ -50,10 +52,17 @@ enum { SLIDESHOW_DELAY = 900 };
 static const double GAMMA_MAX   = 10.0;
 static const int    GAMMA_RANGE = 32;
 
-/* if false, pixelate images at zoom level != 100%,
- * toggled with 'a' key binding
+/* if 0, pixelate images at zoom level != 100%,
+ * if 1, antialias images at zoom level != 100%,
+ * if 2, pixelate when zoom level >= IMAGE_PIXELIZE_AT ,
+ *       antialias otherwise.
+ * cycled with 'a' key binding.
  */
-static const bool ANTI_ALIAS = false;
+static const int ANTI_ALIAS = 2;
+
+/* when antialias = 2, pixelize if zoom factor > this value.
+ */
+static const float IMAGE_PIXELIZE_AT = (PIXELIZE_AT / 100.0);
 
 /* if true, use a checkerboard background for alpha layer,
  * toggled with 'A' key binding
@@ -76,7 +85,7 @@ static const int thumbnail_zoom_levels[] = { 100, 200, 250, 300, 400 };
 /* pixelize if thumbnail zoom factor > this value.
    values <= 100 have no effect.
  */
-static const int THUMBNAIL_PIXELIZE_AT = 201;
+static const int THUMBNAIL_PIXELIZE_AT = PIXELIZE_AT;
 
 #endif
 #ifdef _MAPPINGS_CONFIG
@@ -155,7 +164,7 @@ static const keymap_t keys[] = {
 	{ ControlMask,  XK_S,             i_slideshow,          None },
 
 	{ ControlMask,  XK_P,             i_toggle_mouse_pos,   None },
-	{ ControlMask,  XK_A,             i_toggle_antialias,   None },
+	{ ControlMask,  XK_A,             i_cycle_antialias,    None },
 	{ ControlMask,  XK_T,             i_toggle_alpha,       None },
 
 };

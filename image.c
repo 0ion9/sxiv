@@ -389,6 +389,28 @@ void img_check_pan(img_t *img, bool moved)
 		img->dirty = true;
 }
 
+void img_update_antialias(img_t *img)
+{
+	char oldaa, newaa;
+
+	oldaa = imlib_context_get_anti_alias();
+	newaa = oldaa;
+
+	if (img->aa == 2) {
+		if ((img->zoom - IMAGE_PIXELIZE_AT) < -0.001)
+			newaa = 1;
+		else
+			newaa = 0;
+	} else {
+		newaa = img->aa;
+	}
+
+	if (newaa != oldaa) {
+		imlib_context_set_anti_alias(newaa);
+		img->dirty = true;
+	}
+}
+
 bool img_fit(img_t *img)
 {
 	float z, zmax, zw, zh;
@@ -419,6 +441,7 @@ bool img_fit(img_t *img)
 
 	if (zoomdiff(z, img->zoom) != 0) {
 		img->zoom = z;
+		img_update_antialias(img);
 		img->dirty = true;
 		return true;
 	} else {
@@ -478,7 +501,7 @@ void img_render(img_t *img)
 	win_clear(win);
 
 	imlib_context_set_image(img->im);
-	imlib_context_set_anti_alias(img->aa);
+	img_update_antialias(img);
 	imlib_context_set_drawable(win->buf.pm);
 
 	if (imlib_image_has_alpha()) {
@@ -553,6 +576,7 @@ bool img_zoom(img_t *img, float z)
 		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / img->zoom;
 		img->zoom = z;
 		img->checkpan = true;
+		img_update_antialias(img);
 		img->dirty = true;
 		return true;
 	} else {
@@ -732,15 +756,18 @@ void img_flip(img_t *img, flipdir_t d)
 	img->dirty = true;
 }
 
-void img_toggle_antialias(img_t *img)
+
+
+void img_cycle_antialias(img_t *img)
 {
 	if (img == NULL || img->im == NULL)
 		return;
 
-	img->aa = !img->aa;
+	img->aa = img->aa + 1;
+	if (img->aa > 2)
+		img->aa = 0;
 	imlib_context_set_image(img->im);
-	imlib_context_set_anti_alias(img->aa);
-	img->dirty = true;
+	img_update_antialias(img);
 }
 
 bool img_change_gamma(img_t *img, int d)
