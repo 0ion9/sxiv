@@ -36,6 +36,8 @@
 void exif_auto_orientate(const fileinfo_t*);
 #endif
 
+#define INTEGER_FIT(w,h,dim)  MAX(1, dim / MAX(w, h))
+
 static char *cache_dir;
 
 char* tns_cache_filepath(const char *filepath)
@@ -426,18 +428,7 @@ void tns_check_view(tns_t *tns, bool scrolled)
 }
 
 
-inline int tns_integer_fit(int w, int h, int dim)
-{
-	int maxv = MAX(w, h);
-	int mul;
 
-	if (maxv > dim / 2)
-		return 1;
-	for (mul = 2; mul < 64; mul++)
-		if ((mul * MAX(w, h)) > dim)
-			break;
-	return (mul - 1);
-}
 
 void tns_render(tns_t *tns)
 {
@@ -458,7 +449,6 @@ void tns_render(tns_t *tns)
 	imlib_context_set_drawable(win->buf.pm);
 
 	zoom = thumbnail_zoom_levels[tns->zmultl];
-	fitmul = 1;
 	tns->cols = MAX(1, win->w / tns->dim);
 	tns->rows = MAX(1, win->h / tns->dim);
 
@@ -487,17 +477,19 @@ void tns_render(tns_t *tns)
 	tns->r_end = tns->end;
 
 	oldaa = imlib_context_get_anti_alias();
-	if (thumbnail_zoom_levels[tns->zmultl] > THUMBNAIL_PIXELIZE_AT)
-		imlib_context_set_anti_alias(0);
 	for (i = tns->first; i < tns->end; i++) {
 		t = &tns->thumbs[i];
 		if (t->im != NULL) {
-			fitmul = tns_integer_fit(t->w, t->h, thumb_sizes[tns->zl]);
+			fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
 			t->x = x + (((thumb_sizes[tns->zl] * zoom ) / 100) \
 			         - ((t->w * zoom * fitmul) / 100)) / 2;
 			t->y = y + (((thumb_sizes[tns->zl] * zoom ) / 100) \
 			         - ((t->h * zoom * fitmul) / 100)) / 2;
 			imlib_context_set_image(t->im);
+			if ((zoom * fitmul) <= THUMBNAIL_PIXELIZE_AT)
+				imlib_context_set_anti_alias(1);
+			else
+				imlib_context_set_anti_alias(0);
 			imlib_render_image_on_drawable_at_size(t->x, t->y,
 				(t->w * zoom * fitmul) / 100, (t->h * zoom * fitmul) / 100);
 			if (tns->files[i].flags & FF_MARK)
@@ -531,7 +523,7 @@ void tns_mark(tns_t *tns, int n, bool mark)
 		int fitmul;
 
 		zoom = thumbnail_zoom_levels[tns->zmultl];
-		fitmul = tns_integer_fit(t->w, t->h, thumb_sizes[tns->zl]);
+		fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
 
 		x = t->x + ((t->w * zoom * fitmul) / 100);
 		y = t->y + ((t->h * zoom * fitmul) / 100);
@@ -562,7 +554,7 @@ void tns_highlight(tns_t *tns, int n, bool hl)
 		int zoom;
 		int fitmul;
 		zoom = thumbnail_zoom_levels[tns->zmultl];
-		fitmul = tns_integer_fit(t->w, t->h, thumb_sizes[tns->zl]);
+		fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
 
 		if (hl)
 			col = win->selcol;
