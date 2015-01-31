@@ -32,7 +32,7 @@ static const char * const BAR_FG_COLOR = "#EEEEEE";
 static const float zoom_levels[] = {
 	 12.5,  25.0,  50.0,  75.0,
 	100.0, 150.0, 200.0, 400.0, 800.0,
-	1600.0, 2400.0
+	1600.0, 2400.0, 3200.0, 4000.0, 4800.0, 5600.0, 6400.0, 7200.0
 };
 
 /* default slideshow delay (in 10th of a second, overwritten via -S option): */
@@ -173,7 +173,7 @@ static const keymap_t keys[] = {
 static const button_t buttons[] = {
 	/* modifiers    button            function              argument */
 	{ 0,            2,                i_navigate,           +1 },
-	{ 0,            3,                i_navigate,           -1 },
+	{ 0,            3,                i_select_region,           -1 },
 	{ 0,            1,                i_drag,               None },
 	{ 0,            4,                i_scroll,             DIR_UP },
 	{ 0,            5,                i_scroll,             DIR_DOWN },

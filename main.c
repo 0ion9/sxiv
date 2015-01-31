@@ -626,6 +626,7 @@ void run_key_handler(const char *key, unsigned int mask)
 	int f, i, pfd[2], retval, status;
 	int fcnt = marked ? markcnt : 1;
 	char kstr[32], oldbar[BAR_L_LEN];
+	char roi_x[16], roi_y[16], roi_f[16], roi_w[16], roi_h[16];
 	struct stat *oldst, st;
 
 	if (keyhandler.cmd == NULL) {
@@ -659,10 +660,27 @@ void run_key_handler(const char *key, unsigned int mask)
 	         mask & Mod1Mask    ? "M-" : "",
 	         mask & ShiftMask   ? "S-" : "", key);
 
+	if (mode != MODE_THUMB){
+		int x, y, f2, w, h;
+		img_get_roi(&img, &x, &y, &f2, &w, &h);
+		snprintf(roi_x, sizeof(roi_x), "%d", x);
+		snprintf(roi_y, sizeof(roi_y), "%d", y);
+		snprintf(roi_f, sizeof(roi_f), "%d", f2);
+		snprintf(roi_w, sizeof(roi_w), "%d", w);
+		snprintf(roi_h, sizeof(roi_h), "%d", h);
+//		snprintf(roi_w, sizeof(roi_w), "%d", (int)MIN(img.win->w /((img.w - img.x) * img.zoom), (img.w - img.x) / img.zoom ));
+//		snprintf(roi_h, sizeof(roi_y), "%d", (int)MIN(img.win->h /((img.h - img.y) * img.zoom), (img.h - img.y) / img.zoom ));
+	} else {
+		roi_x[0] = 0;
+		roi_y[0] = 0;
+		roi_f[0] = 0;
+		roi_w[0] = 0;
+		roi_h[0] = 0;
+	}
 	if ((pid = fork()) == 0) {
 		close(pfd[1]);
 		dup2(pfd[0], 0);
-		execl(keyhandler.cmd, keyhandler.cmd, kstr, NULL);
+		execl(keyhandler.cmd, keyhandler.cmd, kstr, roi_x, roi_y, roi_f, roi_w, roi_h, NULL);
 		warn("could not exec key handler");
 		exit(EXIT_FAILURE);
 	}

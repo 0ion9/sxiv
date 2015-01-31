@@ -72,6 +72,12 @@ void img_init(img_t *img, win_t *win)
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
 	img->multi.length = 0;
+	img->roi.x = 0;
+	img->roi.y = 0;
+	img->roi.f = 0;
+	img->roi.w = 0;
+	img->roi.h = 0;
+	img->roi.fresh = false;
 
 	img->cmod = imlib_create_color_modifier();
 	imlib_context_set_color_modifier(img->cmod);
@@ -357,6 +363,34 @@ void img_close(img_t *img, bool decache)
 	}
 }
 
+void img_get_view_area(img_t *img, int *x, int *y, int *w, int *h)
+{
+	(*x) = 0;
+	(*y) = 0;
+	(*w) = (int)(img->win->w / img->zoom);
+	(*h) = (int)(img->win->h / img->zoom);
+	(*w) = MIN((*w), img->w);
+	(*h) = MIN((*h), img->h);
+
+	if (img->x < 0) {
+		(*x) = (int)((-1 * img->x) / img->zoom);
+	}
+
+	if (img->y < 0) {
+		(*y) = (int)((-1 * img->y) / img->zoom);
+
+	}
+}
+
+void img_get_roi(img_t *img, int *x, int *y, int *f, int *w, int *h)
+{
+	(*x) = img->roi.x;
+	(*y) = img->roi.y;
+	(*f) = img->roi.f;
+	(*w) = img->roi.w;
+	(*h) = img->roi.h;
+}
+
 void img_check_pan(img_t *img, bool moved)
 {
 	win_t *win;
@@ -409,6 +443,22 @@ void img_update_antialias(img_t *img)
 		imlib_context_set_anti_alias(newaa);
 		img->dirty = true;
 	}
+}
+
+bool img_set_roi(img_t *img, int x, int y, int f, int w, int h)
+{
+	bool need_redraw = false;
+	if ((x != img->roi.x) || (y != img->roi.y) ||
+		(f != img->roi.f) || (w != img->roi.w) ||
+		(h != img->roi.h))
+		need_redraw = true;
+
+	img->roi.x = x;
+	img->roi.y = y;
+	img->roi.f = f;
+	img->roi.w = w;
+	img->roi.h = h;
+	return need_redraw;
 }
 
 bool img_fit(img_t *img)
@@ -537,6 +587,27 @@ void img_render(img_t *img)
 		imlib_context_set_color_modifier(img->cmod);
 	} else {
 		imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
+	}
+	// include an outline?
+	if (img->roi.w > 0){
+		float pxx,pxy,x,y,w,h;
+		pxx = (float)(img->x);
+		pxy = (float)(img->y);
+		pxx /= img->zoom;
+		pxy /= img->zoom;
+		x = pxx + (float)(img->roi.x);
+		y = pxy + (float)(img->roi.y);
+		w = (float)img->roi.w;
+		h = (float)img->roi.h;
+		// XXX we may want to snap the result to whole zoomed cell borders. currently it does not align perfectly.
+		x *= img->zoom;
+		y *= img->zoom;
+		w *= img->zoom;
+		h *= img->zoom;
+		warn("%.1fx%.1f+%.1f+%.1f", x, y, w, h);
+		if (((x + w) > 0) && ((y + h) > 0))
+			win_draw_rect(img->win, x, y, w, h,
+		                      false, 1, img->win->selcol);
 	}
 	img->dirty = false;
 }

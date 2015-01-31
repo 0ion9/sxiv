@@ -400,7 +400,7 @@ bool ci_drag(arg_t _)
 
 	if (!XQueryPointer(win.env.dpy, win.xwin, &w, &w, &i, &i, &ox, &oy, &ui))
 		return false;
-	
+
 	win_set_cursor(&win, CURSOR_HAND);
 
 	while (dragging) {
@@ -442,6 +442,79 @@ bool ci_drag(arg_t _)
 			dx = dy = 0;
 		}
 	}
+	win_set_cursor(&win, CURSOR_ARROW);
+	set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
+	reset_timeout(redraw);
+
+	return true;
+}
+
+// select a rectangular area
+bool ci_select_region(arg_t _)
+{
+	int width = 0, h = 0, i, basex, basey, ox, oy, x, y, dx, dy;
+	unsigned int ui;
+	bool dragging = true, next = false;
+	XEvent e;
+	Window w;
+
+	if (!XQueryPointer(win.env.dpy, win.xwin, &w, &w, &i, &i, &ox, &oy, &ui))
+		return false;
+
+	win_set_cursor(&win, CURSOR_HAND);
+
+	basex = ox;
+	basey = oy;
+	x = ox;
+	y = oy;
+	while (dragging) {
+		if (!next)
+			XMaskEvent(win.env.dpy,
+			           ButtonPressMask | ButtonReleaseMask | PointerMotionMask, &e);
+		switch (e.type) {
+			case ButtonPress:
+			case ButtonRelease:
+				dragging = false;
+				break;
+			case MotionNotify:
+				x = e.xmotion.x;
+				y = e.xmotion.y;
+				dx = (x - ox);
+				width += dx;
+				dy = (y - oy);
+				h += dy;
+				ox = ox; oy = oy;
+
+				//warn("dx dy %d %d -> %d %d", dx, dy, width, h);
+
+				/* DON'T wrap the mouse around */
+				break;
+		}
+		if (dragging)
+			next = XCheckIfEvent(win.env.dpy, &e, is_motionnotify, None);
+		if ((!dragging || !next) && ((width != 0) || (h != 0))){
+			if (width < 0) {
+				x = MAX(0, x + width);
+				width = width * -1;
+			}
+			if (h < 0) {
+				h = MAX(0, y + h);
+				h = h * -1;
+			}
+			x = (int)((float)((float)-img.x + (float)basex) / img.zoom);
+			y = (int)((float)((float)-img.y + (float)basey) / img.zoom);
+			warn("W,H %d %d", width, h);
+			width = (int)((float)(width) / img.zoom);
+			h = (int)(h / img.zoom);
+			warn("W2,H2 %d %d", width, h);
+			warn("IMG.ZOOM %f", img.zoom);
+			img_set_roi(&img, x , y, img.multi.sel, width, h);
+			img.dirty = true;
+			img_render(&img);
+			win_draw(&win);
+		}
+	}
+
 	win_set_cursor(&win, CURSOR_ARROW);
 	set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
 	reset_timeout(redraw);

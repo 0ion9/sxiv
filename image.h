@@ -64,6 +64,12 @@ typedef struct {
 		int delay;
 	} ss;
 
+	struct {
+		bool fresh;
+		int x,y,f;
+		int w,h;
+	} roi;
+
 	multi_img_t multi;
 } img_t;
 
@@ -73,8 +79,11 @@ bool img_load(img_t*, const fileinfo_t*);
 void img_close(img_t*, bool);
 
 void img_render(img_t*);
+void img_get_view_area(img_t*, int*, int*, int*, int*);
+void img_get_roi(img_t*, int*, int*, int*, int*, int*);
 
 bool img_fit_win(img_t*, scalemode_t);
+bool img_set_roi(img_t*, int, int, int, int, int);
 
 bool img_zoom(img_t*, float);
 bool img_zoom_in(img_t*);
