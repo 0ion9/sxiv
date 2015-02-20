@@ -33,6 +33,7 @@
 #include <sys/wait.h>
 #include <X11/keysym.h>
 #include <X11/XF86keysym.h>
+#include <libgen.h>
 
 #include "types.h"
 #include "commands.h"
@@ -484,7 +485,7 @@ void update_info(void)
 	if (mode == MODE_THUMB) {
 		win_set_title(&win, "sxiv");
 	} else {
-		snprintf(title, sizeof(title), "sxiv - %s", files[fileidx].name);
+		snprintf(title, sizeof(title), "sxiv - %s", basename((char *)files[fileidx].name));
 		win_set_title(&win, title);
 	}
 
