@@ -30,7 +30,8 @@ static const char * const BAR_FG_COLOR = "#EEEEEE";
  * (first/last value is used as min/max zoom level)
  */
 static const float zoom_levels[] = {
-	 12.5,  25.0,  50.0,  75.0,
+	5.0, 6.125, 9.1875,
+	12.5,  25.0,  50.0,  75.0,
 	100.0, 150.0, 200.0, 400.0, 800.0,
 	1600.0, 2400.0
 };
@@ -152,7 +153,7 @@ static const keymap_t keys[] = {
 	{ ShiftMask,    XK_Up,            i_scroll_to_edge,     DIR_UP },
 	{ ShiftMask,    XK_Right,         i_scroll_to_edge,     DIR_RIGHT },
 	{ ControlMask,  XK_plus,          i_set_zoom,           100 },
-	{ 0,            XK_minus,         i_fit_to_win,         SCALE_DOWN },
+	{ Mod1Mask,     XK_minus,         i_fit_to_win,         SCALE_DOWN },
 	{ 0,            XK_underscore,    i_fit_to_win,         SCALE_FIT },
 	{ ControlMask,  XK_minus,         i_fit_to_win,         SCALE_WIDTH },
 	{ ControlMask,  XK_underscore,    i_fit_to_win,         SCALE_HEIGHT },
