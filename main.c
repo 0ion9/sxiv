@@ -31,7 +31,11 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#define XK_TECHNICAL
+#define XK_PUBLISHING
+#define XK_SPECIAL
 #include <X11/keysym.h>
+#include <X11/keysymdef.h>
 #include <X11/XF86keysym.h>
 #include <libgen.h>
 
