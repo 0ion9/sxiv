@@ -34,5 +34,6 @@ I_CMD(toggle_mouse_pos)
 I_CMD(slideshow)
 
 T_CMD(move_sel)
+T_CMD(move_and_reorder)
 T_CMD(reload_all)
 

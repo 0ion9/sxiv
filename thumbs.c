@@ -574,7 +574,7 @@ void tns_highlight(tns_t *tns, int n, bool hl)
 	}
 }
 
-bool tns_move_selection(tns_t *tns, direction_t dir, int cnt)
+int tns_move_selection(tns_t *tns, direction_t dir, int cnt)
 {
 	int old, max;
 
@@ -607,7 +607,7 @@ bool tns_move_selection(tns_t *tns, direction_t dir, int cnt)
 		if (!tns->dirty)
 			tns_highlight(tns, *tns->sel, true);
 	}
-	return *tns->sel != old;
+	return ((*tns->sel) - old);
 }
 
 bool tns_scroll(tns_t *tns, direction_t dir, bool screen)

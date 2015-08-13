@@ -502,7 +502,24 @@ bool ci_slideshow(arg_t _)
 
 bool ct_move_sel(arg_t dir)
 {
-	return tns_move_selection(&tns, dir, prefix);
+	return (tns_move_selection(&tns, dir, prefix) != 0);
+}
+
+bool ct_move_and_reorder(arg_t dir)
+{
+        int tn_offset;
+        int old_index;
+        old_index = fileidx;
+        tn_offset = tns_move_selection(&tns, dir, prefix);
+        if (tn_offset != 0) {
+		shift_file(old_index, tn_offset);
+		tns.dirty = true;
+		if (mode == MODE_IMAGE) {
+			load_image(fileidx);
+		}
+		return true;
+	}
+        return false;
 }
 
 bool ct_reload_all(arg_t _)
