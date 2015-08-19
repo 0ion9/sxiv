@@ -655,7 +655,7 @@ void run_key_handler(const char *key, unsigned int mask)
 	oldst = s_malloc(fcnt * sizeof(*oldst));
 
 	memcpy(oldbar, win.bar.l.buf, sizeof(oldbar));
-	strncpy(win.bar.l.buf, "Running key handler...", win.bar.l.size);
+	snprintf(win.bar.l.buf, win.bar.l.size, "[KeyHandling..] %s", oldbar);
 	win_draw(&win);
 	win_set_cursor(&win, CURSOR_WATCH);
 
