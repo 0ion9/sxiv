@@ -711,7 +711,8 @@ end:
 			img_close(&img, true);
 			load_image(fileidx);
 		} else if (info.cmd != NULL) {
-			memcpy(win.bar.l.buf, oldbar, win.bar.l.size);
+			info.open = false;
+			open_info();
 		}
 	}
 	free(oldst);
