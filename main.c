@@ -235,6 +235,30 @@ void shift_marked_files(int direction)
 
 }
 
+void swap_files(int n, int offset)
+{
+	fileinfo_t info;
+	thumb_t thumb;
+	int final_location;
+	int actual_offset;
+
+	final_location = n + offset;
+	if (final_location < 0)
+		final_location = 0;
+	if (final_location > (filecnt - 1))
+		final_location = filecnt - 1;
+
+	actual_offset = final_location - n;
+	if (actual_offset == 0)
+		return;
+	memcpy(&info, files + n, sizeof(fileinfo_t));
+	memcpy(&thumb, tns.thumbs + n, sizeof(*tns.thumbs));
+	memcpy(files + n, files + final_location, sizeof(fileinfo_t));
+	memcpy(tns.thumbs + n, tns.thumbs + final_location, sizeof(*tns.thumbs));
+	memcpy(files + final_location, &info, sizeof(fileinfo_t));
+	memcpy(tns.thumbs + final_location, &thumb,sizeof(*tns.thumbs));
+}
+
 void shift_file(int n, int offset)
 {
 	fileinfo_t info;

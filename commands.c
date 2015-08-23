@@ -32,6 +32,7 @@
 #include "config.h"
 
 void cleanup(void);
+void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
 void remove_file(int, bool);
@@ -507,12 +508,13 @@ bool ct_move_sel(arg_t dir)
 
 bool ct_move_and_reorder(arg_t dir)
 {
-        int tn_offset;
-        int old_index;
-        old_index = fileidx;
-        tn_offset = tns_move_selection(&tns, dir, prefix);
-        if (tn_offset != 0) {
-		shift_file(old_index, tn_offset);
+	int tn_offset;
+	int old_index;
+	direction_t _dir = (direction_t)(dir);
+	old_index = fileidx;
+	tn_offset = tns_move_selection(&tns, dir, prefix);
+	if (tn_offset != 0) {
+		swap_files(old_index, tn_offset);
 		tns.dirty = true;
 		if (mode == MODE_IMAGE) {
 			load_image(fileidx);
