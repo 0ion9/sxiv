@@ -181,7 +181,8 @@ void tns_init(tns_t *tns, fileinfo_t *files, const int *cnt, int *sel,
 	tns->win = win;
 	tns->dirty = false;
 
-	tns->zl = 0;
+	tns->zl = MIN(default_thumbsize_index, sizeof(thumb_sizes) / sizeof(int));
+	tns->zl = MAX(0, tns->zl);
 	tns->zmultl = 0;
 	tns_zoom(tns, 1);
 
