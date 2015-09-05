@@ -70,6 +70,16 @@ static const float IMAGE_PIXELIZE_AT = (PIXELIZE_AT / 100.0);
  */
 static const bool ALPHA_LAYER = false;
 
+/* Silhouette rendering colors */
+static int SILHOUETTE_COLOR[6][3] = {
+   {0, 0, 0},
+   {192, 192, 192},
+   {255, 255, 255},
+   {150, 150, 204},
+   {150, 204, 150},
+   {204, 150, 150}
+};
+
 #endif
 #ifdef _THUMBS_CONFIG
 
@@ -125,6 +135,9 @@ static const keymap_t keys[] = {
 	{ 0,            XK_braceleft,     g_change_gamma,       -1 },
 	{ 0,            XK_braceright,    g_change_gamma,       +1 },
 	{ ControlMask,  XK_G,             g_change_gamma,        0 },
+	{ 0          ,  XK_S,             g_cycle_silhouetting, None },
+	{ 0          ,  XK_T,             g_cycle_opacity,      None },
+	{ ControlMask,  XK_t,             g_toggle_negalpha,    None },
 	{ 0          ,  XK_KP_4,          g_first,              None },
 	{ Mod1Mask   ,  XK_Left,          g_reorder_image,      -9999999 },
 	{ Mod1Mask   ,  XK_Right,         g_reorder_image,      9999999 },

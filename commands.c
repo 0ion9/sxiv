@@ -478,6 +478,28 @@ bool ci_cycle_antialias(arg_t _)
 	return true;
 }
 
+bool cg_cycle_silhouetting(arg_t _)
+{
+	img_cycle_silhouetting(&img);
+	tns.dirty = true;
+	return true;
+}
+
+bool cg_cycle_opacity(arg_t _)
+{
+	img_cycle_opacity(&img);
+	tns.dirty = true;
+	return true;
+}
+
+bool cg_toggle_negalpha(arg_t _)
+{
+	img_toggle_negalpha(&img);
+	tns.dirty = true;
+	return true;
+}
+
+
 bool ci_toggle_alpha(arg_t _)
 {
 	img.alpha = !img.alpha;

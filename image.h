@@ -58,6 +58,9 @@ typedef struct {
 
 	Imlib_Color_Modifier cmod;
 	int gamma;
+	int silhouetting;
+	int opacity;
+	bool negate_alpha;
 
 	struct {
 		bool on;
@@ -88,7 +91,9 @@ void img_rotate(img_t*, degree_t);
 void img_flip(img_t*, flipdir_t);
 
 void img_cycle_antialias(img_t*);
-
+void img_cycle_silhouetting(img_t*);
+void img_toggle_negalpha(img_t*);
+bool img_cycle_opacity(img_t*);
 bool img_change_gamma(img_t*, int);
 
 bool img_frame_navigate(img_t*, int);

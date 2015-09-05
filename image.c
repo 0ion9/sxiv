@@ -46,6 +46,8 @@ static int zoomdiff(float z1, float z2)
 	return (int) (z1 * 1000.0 - z2 * 1000.0);
 }
 
+void img_update_colormodifiers(img_t *);
+
 void img_init(img_t *img, win_t *win)
 {
 	zoom_min = zoom_levels[0] / 100.0;
@@ -68,6 +70,9 @@ void img_init(img_t *img, win_t *win)
 	img->dirty = false;
 	img->aa = ANTI_ALIAS;
 	img->alpha = ALPHA_LAYER;
+	img->silhouetting = 0;
+	img->negate_alpha = false;
+	img->opacity = 6;
 	img->show_mouse_pos = options->show_mouse_pos;
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
@@ -76,6 +81,7 @@ void img_init(img_t *img, win_t *win)
 	img->cmod = imlib_create_color_modifier();
 	imlib_context_set_color_modifier(img->cmod);
 	img->gamma = MIN(MAX(options->gamma, -GAMMA_RANGE), GAMMA_RANGE);
+	img_update_colormodifiers(img);
 
 	img->ss.on = options->slideshow > 0;
 	img->ss.delay = options->slideshow > 0 ? options->slideshow * 100 : SLIDESHOW_DELAY * 100;
@@ -770,6 +776,105 @@ void img_cycle_antialias(img_t *img)
 	img_update_antialias(img);
 }
 
+void img_update_colormodifiers(img_t *img)
+{
+	double range;
+	unsigned int i;
+	DATA8 r[256];
+	DATA8 g[256];
+	DATA8 b[256];
+	DATA8 a[256];
+	if (img == NULL)
+		return;
+	// here, we handle the:
+	//  * silhouetting
+	//  * negate alpha
+	//  * opacity
+	//  * gamma
+	// options.
+	//
+	if (img->silhouetting == 0)
+	{
+		imlib_reset_color_modifier();
+		// not sure what is happening here, but this isn't being reset properly when silhouetting hits 0, so I'm forcing it
+		imlib_get_color_modifier_tables(r, g, b, a);
+		for (i=0;i < 256; i++) {
+			r[i] = i;
+			g[i] = i;
+			b[i] = i;
+			a[i] = i;
+		}
+		//r[255] = 255;
+		//g[255] = 255;
+		//b[255] = 255;
+		imlib_set_color_modifier_tables(r, g, b, a);
+		if (img->gamma != 0) {
+			range = img->gamma <= 0 ? 1.0 : GAMMA_MAX - 1.0;
+			imlib_modify_color_modifier_gamma(1.0 + img->gamma * (range / GAMMA_RANGE));
+		}
+	}
+	img->dirty = true;
+	if (img->negate_alpha == 0 && img->opacity == 6 && img->silhouetting == 0)
+		return;
+	else {
+		int i;
+		bool negate_alpha = img->negate_alpha;
+		int opacity = img->opacity;
+		int silhouetting = img->silhouetting - 1;
+
+		imlib_get_color_modifier_tables(r, g, b, a);
+		// silhouetting is the only effect aside from gamma that changes rgb
+		if (silhouetting != -1) {
+			for (i=0;i < 256; i++) {
+				r[i] = SILHOUETTE_COLOR[silhouetting][0];
+				g[i] = SILHOUETTE_COLOR[silhouetting][1];
+				b[i] = SILHOUETTE_COLOR[silhouetting][2];
+			}
+		}
+		// negate_alpha is applied before opacity
+		for (i=0;i < 256; i++) {
+			a[i] = ((negate_alpha ? 255 - i: i ) * opacity) / 6;
+		}
+		imlib_set_color_modifier_tables(r, g, b, a);
+	}
+}
+
+void img_cycle_silhouetting(img_t *img)
+{
+	if (img == NULL)
+		return;
+
+	img->silhouetting = img->silhouetting + 1;
+	// XXX needs testing.
+	if (img->silhouetting > ARRLEN(SILHOUETTE_COLOR))
+	    img->silhouetting = 0;
+	img_update_colormodifiers(img);
+}
+
+void img_toggle_negalpha(img_t *img)
+{
+	if (img == NULL)
+		return;
+	img->negate_alpha = !img->negate_alpha;
+	img_update_colormodifiers(img);
+}
+
+bool img_cycle_opacity(img_t *img)
+{
+	int new_opacity;
+	if (img == NULL)
+		return false;
+	new_opacity = img->opacity + 1;
+	if (new_opacity > 6)
+		new_opacity = 1;
+	if (new_opacity != img->opacity){
+		img->opacity = new_opacity;
+	    img_update_colormodifiers(img);
+	    return true;
+	}
+	return false;
+}
+
 bool img_change_gamma(img_t *img, int d)
 {
 	/* d < 0: decrease gamma
@@ -777,7 +882,6 @@ bool img_change_gamma(img_t *img, int d)
 	 * d > 0: increase gamma
 	 */
 	int gamma;
-	double range;
 
 	if (img == NULL)
 		return false;
@@ -788,13 +892,8 @@ bool img_change_gamma(img_t *img, int d)
 		gamma = MIN(MAX(img->gamma + d, -GAMMA_RANGE), GAMMA_RANGE);
 
 	if (img->gamma != gamma) {
-		imlib_reset_color_modifier();
-		if (gamma != 0) {
-			range = gamma <= 0 ? 1.0 : GAMMA_MAX - 1.0;
-			imlib_modify_color_modifier_gamma(1.0 + gamma * (range / GAMMA_RANGE));
-		}
 		img->gamma = gamma;
-		img->dirty = true;
+		img_update_colormodifiers(img);
 		return true;
 	} else {
 		return false;
