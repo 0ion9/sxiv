@@ -137,6 +137,12 @@ bool cg_reload_image(arg_t _)
 	return true;
 }
 
+bool cg_clone_image(arg_t _)
+{
+	clone_file(fileidx);
+	return true;
+}
+
 bool cg_remove_image(arg_t _)
 {
 	remove_file(fileidx, true);

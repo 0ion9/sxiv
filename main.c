@@ -336,6 +336,89 @@ void remove_file(int n, bool manual)
 		alternate--;
 }
 
+#include <inttypes.h>
+
+#include <stdint.h>
+
+void clone_file(int n)
+{
+	char *newpath;
+	char *newname;
+	char *newbase;
+	fileinfo_t *newinfo;
+	fileinfo_t *oldinfo;
+	thumb_t *newthumb = NULL;
+	thumb_t *oldthumb = NULL;
+	int i;
+
+	if (n < 0 || n >= filecnt)
+		return;
+	if (files[n].flags & FF_MARK)
+		markcnt++;
+	fprintf(stderr, "sxiv: cloning index %d\n", n);
+	for (i=0; i < filecnt; i++){
+		fprintf(stderr, "%d : %s;%s;%s\n", i, files[i].path, files[i].name, files[i].base);
+	}
+	if (tns.thumbs == NULL)
+		tns_init(&tns, files, &filecnt, &fileidx, &win);
+
+	// the shenanigans we get up to with tns -- particularly, duplicating image pointers.. would suggest that
+	// this code should crash. However, it doesn't.
+	oldthumb = tns.thumbs;
+	fprintf(stderr, "sxiv: tns.thumbs = %016" PRIxPTR "\n", (uintptr_t) tns.thumbs);
+	fprintf(stderr, "sxiv: oldthumb = %016" PRIxPTR "\n", (uintptr_t) oldthumb);
+	oldinfo = files;
+	newname = strdup(files[n].name);
+	newpath = newname;
+	if (files[n].path != files[n].name)
+		newpath = strdup(files[n].path);
+	newbase = strdup(files[n].base);
+	fprintf(stderr, "sxiv: newp,n,b = %016" PRIxPTR " %016" PRIxPTR "%016" PRIxPTR "\n", (uintptr_t) newpath, (uintptr_t) newname, (uintptr_t) newbase);
+	newinfo = (fileinfo_t *) s_malloc(sizeof(*oldinfo) * (filecnt + 1));
+	if (oldthumb != NULL)
+		newthumb = (thumb_t *) s_malloc(sizeof(*oldthumb) * (filecnt + 1));
+	// reallocate memory (files, tns)
+	// copy the segment at start as-is
+	fprintf(stderr, "sxiv: thumbsize = %d; allthumbs= %d\n", sizeof(*oldthumb), sizeof(*oldthumb) * (filecnt + 1));
+	memcpy(newinfo, oldinfo, (n+1) * sizeof(*oldinfo));
+	if (oldthumb != NULL)
+		memcpy(newthumb, oldthumb, (n+1) * sizeof(*oldthumb));
+	// insert the clone entry
+	fprintf(stderr, "clone insertion at %d\n", n+1);
+	memcpy(newinfo + (n + 1), oldinfo + n, sizeof(*oldinfo));
+	if (oldthumb != NULL)
+		memcpy(newthumb + (n + 1), oldthumb + n, sizeof(*oldthumb));
+	newinfo[n+1].name = newname;
+	newinfo[n+1].path = newpath;
+	newinfo[n+1].base = newbase;
+	if (n < (filecnt - 1)) {
+		memcpy(newinfo + (n + 2), files + n + 1, (filecnt - (n + 1)) * sizeof(*files));
+		if (oldthumb != NULL)
+			memcpy(newthumb + (n + 2), tns.thumbs + n + 1, (filecnt - (n + 1)) * sizeof(*tns.thumbs));
+	}
+	// copy the segment at end (if any, ie, n + 1 < filecnt)
+	// reassign files and tns.thumbs to point at new data
+	// free the original data
+	free(oldinfo);
+	files = newinfo;
+	if (oldthumb != NULL) {
+		free(oldthumb);
+		tns.thumbs = newthumb;
+	}
+	filecnt++;
+	fileidx++;
+	// hack-- force reload..
+	// seems a little monstrous but it works.
+	tns_free(&tns);
+	tns_init(&tns, files, &filecnt, &fileidx, &win);
+	tns.dirty = true;
+	if (n < alternate)
+		alternate++;
+	for (i=0; i < filecnt; i++){
+		fprintf(stderr, "%d : %s;%s;%s\n", i, newinfo[i].path, files[i].name, files[i].base);
+	}
+}
+
 void set_timeout(timeout_f handler, int time, bool overwrite)
 {
 	int i;

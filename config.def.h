@@ -139,6 +139,7 @@ static const keymap_t keys[] = {
 	{ 0          ,  XK_T,             g_cycle_opacity,      None },
 	{ ControlMask,  XK_t,             g_toggle_negalpha,    None },
 	{ 0          ,  XK_KP_4,          g_first,              None },
+	{ 0          ,  XK_C,             g_clone_image,        None },
 	{ Mod1Mask   ,  XK_Left,          g_reorder_image,      -9999999 },
 	{ Mod1Mask   ,  XK_Right,         g_reorder_image,      9999999 },
 	{ 0          ,  XK_Pointer_Left,  t_move_and_reorder,   DIR_LEFT },
