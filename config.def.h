@@ -32,7 +32,7 @@ static const char * const BAR_FG_COLOR = "#EEEEEE";
 static const float zoom_levels[] = {
 	5.0, 6.125, 9.1875,
 	12.5,  25.0,  50.0,  75.0,
-	100.0, 150.0, 200.0, 400.0, 800.0,
+	100.0, 200.0, 300.0, 400.0, 800.0,
 	1600.0, 2400.0
 };
 
