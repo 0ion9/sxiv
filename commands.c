@@ -377,10 +377,9 @@ bool ci_toggle_mouse_pos(arg_t a)
 	return true;
 }
 
-bool ci_toggle_tiling(arg_t _)
+bool ci_cycle_tiling(arg_t _)
 {
-	img.tiling = !img.tiling;
-	img.dirty = true;
+	img_cycle_tiling(&img);
 	return true;
 }
 

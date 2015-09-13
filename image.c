@@ -77,7 +77,7 @@ void img_init(img_t *img, win_t *win)
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
 	img->multi.length = 0;
-	img->tiling = true;
+	img->tile.mode = true;
 
 	img->cmod = imlib_create_color_modifier();
 	imlib_context_set_color_modifier(img->cmod);
@@ -373,6 +373,8 @@ void img_check_pan(img_t *img, bool moved)
 	if (img == NULL || img->im == NULL || img->win == NULL)
 		return;
 
+	// XXX probably needs adjustment to tiling view
+
 	win = img->win;
 	w = img->w * img->zoom;
 	h = img->h * img->zoom;
@@ -430,6 +432,11 @@ bool img_fit(img_t *img)
 	zmax = img->scalemode == SCALE_DOWN ? 1.0 : zoom_max;
 	zw = (float) img->win->w / (float) img->w;
 	zh = (float) img->win->h / (float) img->h;
+	// minimum 3x3 tiles for fit in tiled mode
+	if (img->tile.mode > 0){
+		zw /= 3;
+		zh /= 3;
+	}
 
 	switch (img->scalemode) {
 		case SCALE_WIDTH:
@@ -453,6 +460,239 @@ bool img_fit(img_t *img)
 		return true;
 	} else {
 		return false;
+	}
+}
+/*
+* BDACDD
+ * CADBOD
+ * ACBDCC
+ * DBCABB
+ * CADBAA
+ * CABBBD
+ */
+
+/* We could also use this for rotated versions, ie. the set
+ * rot0 rot90 rot180 rot270.
+ * With a larger pattern, we might even manage both together -- ie.
+ * rot0 rot90 rot180 rot270 xflip yflip
+ */
+
+static unsigned char _all_adj_layout[6][6] = {
+	{1, 3, 0, 2, 3, 3},
+	{2, 0, 3, 1, 0, 3},
+	{0, 2, 1, 3, 2, 2},
+	{3, 1, 2, 0, 1, 1},
+	{2, 0, 3, 1, 0, 0},
+	{2, 0, 2, 2, 2, 3}
+};
+
+
+// XXX hardcoded '12' size
+void _img_update_tiling_layout(img_t *img, int layout_index)
+{
+	int x, y;
+	unsigned char v;
+	char buf[13];
+    switch (layout_index) {
+		case 0:
+			warn("SETTING NOFLIPS LAYOUT");
+			memset(img->tile.layout, 0, sizeof(*(img->tile.layout)));
+			break;
+		case 1:
+			warn("SETTING ALLADJ LAYOUT");
+			for (y = 0; y < 12; y++) {
+				for (x = 0; x < 12; x++) {
+					v = _all_adj_layout[y % 6][x % 6];
+					warn("v = %d", v);
+					img->tile.layout[y][x] = v;
+				}
+			}
+			break;
+		case 2:
+			warn("SETTING RANDOM LAYOUT");
+		    for (y = 0; y < 12; y++) {
+				for (x = 0; x < 12; x++) {
+					v = random() & 0x3;
+					img->tile.layout[y][x] = v;
+				}
+			}
+			break;
+	}
+    for (y = 0; y < 12; y++) {
+		for (x = 0; x < 12; x++) {
+			buf[x] = 48 + img->tile.layout[y][x];
+		}
+		buf[12] = 0;
+		warn(buf);
+	}
+}
+
+/* TILING
+ *
+ * There are a number of tiling patterns using VHFLIPS that may be of interest:
+ * Rotated versions of these are not listed here.
+ *
+ * For the sake of genericness, the original version is represented as 'A'
+ * , horizontally flipped as 'B', vertically flipped as 'C', and HVflipped as 'D'.
+ *
+ *
+ * Unflipped:
+ *  A
+ *
+ * Basic:
+ *
+ *  AB
+ *  CD
+ *
+ * Random:
+ *  (Random)
+ *
+ * All adjacencies, 6x6:
+ *
+ * BDACDD
+ * CADBOD
+ * ACBDCC
+ * DBCABB
+ * CADBAA
+ * CABBBD
+ *
+ *  NOTE: there are twelve possible adjacencies in a single axis:
+ *        BV BH BO VB VH VO HB HV HO OV OB OH
+ *        plus four more self-self:
+ *        BB HH VV OO
+ *  There are four axes: X, Y, XY and -XY.
+ *  The above pattern was solved with the help of a Python matrix checker ('adjsolve.py'),
+ *  which verified it satisfies all X, Y, +XY and -XY adjacency constraints, including self-self.
+ *
+ *  This matrix is also applicable to any set of four tiles, naturally.
+ *
+ * Tilings for 2-tile set:
+ *
+ * ABA
+ * BAB
+ * ABA
+ *
+ * 3-tile set:
+ *
+ * ABCABB
+ * CABCCA
+ * BACAAB
+ *
+ */
+
+
+// draw tiles
+// expects img->tile.cache to be prefilled.
+void img_draw_tiles(img_t *img)
+{
+	int x, y;
+	int tx, ty;
+	int stepx, stepy;
+	int initx, inity;
+	int winw, winh;
+	int ntiles;
+	int sx, sy, sw, sh;
+	int dx, dy, dw, dh;
+	win_t *win;
+
+	win = img->win;
+	ntiles = win->w / (img->w * img->zoom);
+	if ((ntiles * (img->w * img->zoom)) < win->w)
+		ntiles++;
+	dh = win->h / (img->h * img->zoom);
+	if ((dh * (img->h * img->zoom)) < win->h);
+		dh++;
+	ntiles = ntiles * dh;
+	winw = win->w;
+	winh = win->h;
+	stepx = img->w * img->zoom;
+	stepy = img->h * img->zoom;
+	tx = 0;
+	ty = 0;
+	x = img->x;
+	y = img->y;
+	if (x <= 0) {
+		sx = -x / img->zoom + 0.5;
+		sw = win->w / img->zoom;
+		dx = 0;
+		dw = winw;
+	} else {
+		sx = 0;
+		sw = img->w;
+		dx = x;
+		dw = img->w * img->zoom;
+	}
+	if (y <= 0) {
+		sy = -y / img->zoom + 0.5;
+		sh = win->h / img->zoom;
+		dy = 0;
+		dh = winh;
+	} else {
+		sy = 0;
+		sh = img->h;
+		dy = y;
+		dh = img->h * img->zoom;
+	}
+
+	if ((dy + dh) < winh)
+		sh = img->h;
+	if ((dx + dw) < winw)
+		sw = img->w;
+
+	// XXX use ntiles to decide how large of an area to fill.
+	// actually, that should be part of zoom setup?
+	if (img->x >= 0 && img->y >= 0)	{
+		warn("simpletiling");
+		for (y = 0; y < winh; y += stepy) {
+			for (x = 0; x < winw; x += stepx) {
+				// maybe needs clipping?
+				// anyway appears to work.
+				imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
+				imlib_render_image_part_on_drawable_at_size(0, 0, sw, sh, x, y, dw, dh);
+				tx += 1;
+			}
+			ty += 1;
+		}
+	} else {
+		// complextiling has always been broken.
+		initx = img->x * img->zoom;
+		inity = img->y * img->zoom;
+		while (initx > 0)
+			initx -= stepx;
+		while (inity > 0)
+			inity -= stepy;
+		for (y = initx; y < winh; y += stepy) {
+			for (x = inity; x < winw; x += stepx) {
+				// maybe needs clipping?
+				// anyway appears to work.
+				if (x <= 0) {
+					sx = -x / img->zoom + 0.5;
+					sw = win->w / img->zoom;
+					dx = 0;
+					dw = win->w;
+				} else {
+					sx = 0;
+					sw = img->w;
+					dx = x;
+					dw = img->w * img->zoom;
+				}
+				if (y <= 0) {
+					sy = -y / img->zoom + 0.5;
+					sh = win->h / img->zoom;
+					dy = 0;
+					dh = win->h;
+				} else {
+					sy = 0;
+					sh = img->h;
+					dy = y;
+					dh = img->h * img->zoom;
+				}
+				imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
+				imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, x, y, dw, dh);
+				tx += 1;
+			}
+			ty += 1;
+		}
 	}
 }
 
@@ -514,7 +754,10 @@ void img_render(img_t *img)
 	img_update_antialias(img);
 	imlib_context_set_drawable(win->buf.pm);
 
+	// this will be true if image originally had alpha OR if we have an alpha-
+	// modifying colormod active.
 	if (imlib_image_has_alpha()) {
+		// create enough checkerboard/whatever to composite onto...
 		if ((bg = imlib_create_image(dw, dh)) == NULL)
 			die("could not allocate memory");
 		imlib_context_set_image(bg);
@@ -540,82 +783,105 @@ void img_render(img_t *img)
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, dw, dh);
 		}
+		// so, now we have our BG.
+		// it's set as the context image
+		// we throw the main image onto it.
+		// now would be the time to put it in the img->tile.cache. and generate alts.
+		img_update_colormodifiers(img);
+		// note: sw + sh are too small, either here or inside img_draw_tiles
+
 		imlib_blend_image_onto_image(img->im, 0, sx, sy, sw, sh, 0, 0, dw, dh);
 		imlib_context_set_color_modifier(NULL);
-		imlib_render_image_on_drawable(dx, dy);
-		imlib_free_image();
+		if (img->tile.mode > 0) {
+			warn("tiling, alpha");
+			int i;
+			img->tile.cache[0] = imlib_context_get_image();
+			if (img->tile.mode == 1){
+				img->tile.cache[1] = img->tile.cache[0];
+				img->tile.cache[2] = img->tile.cache[0];
+				img->tile.cache[3] = img->tile.cache[0];
+			} else {
+				img->tile.cache[1] = imlib_clone_image();
+				imlib_context_set_image(img->tile.cache[1]);
+				imlib_image_flip_horizontal();
+				imlib_context_set_image(img->tile.cache[0]);
+				img->tile.cache[2] = imlib_clone_image();
+				imlib_context_set_image(img->tile.cache[2]);
+				imlib_image_flip_vertical();
+				imlib_context_set_image(img->tile.cache[0]);
+				img->tile.cache[3] = imlib_clone_image();
+				imlib_context_set_image(img->tile.cache[3]);
+				imlib_image_flip_horizontal();
+				imlib_image_flip_vertical();
+			}
+			// this debugging has revealed the clipping glitch is not caused here.
+			//if (img->zoom == 2.0){
+//				imlib_context_set_image(img->tile.cache[1]);
+				//imlib_image_set_format("png");
+				//imlib_save_image("/tmp/glitch.png");
+				// save image
+			//}
+			img_draw_tiles(img);
+
+			for (i=0; i<4; i++)
+			{
+			    imlib_context_set_image(img->tile.cache[i]);
+			    imlib_free_image();
+			}
+		} else {
+			imlib_render_image_on_drawable(dx, dy);
+			imlib_free_image();
+		}
 		imlib_context_set_color_modifier(img->cmod);
+		img_update_colormodifiers(img);
 	} else {
 		// note : for now, tiling is only supported on images without alpha channel.
-		if (img->tiling == false){
+		if (img->tile.mode == 0){
 			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 		} else {
-			int x, y;
-			int stepx, stepy;
-			int initx, inity;
-			int winw, winh;
 			warn("tiling, no alpha");
-			winw = win->w;
-			winh = win->h;
-			stepx = img->w * img->zoom;
-			stepy = img->h * img->zoom;
-			if (img->x >= 0 && img->y >= 0)
+			//warn("NTILES %d", ntiles);
+			// XXX support vhflip variants.
+			// when image is relatively small or ntiles >16, img->tile.cache these variants before draw.
+			// otherwise apply in realtime:
+			// imlib_image_flip_horizontal, imlib_image_flip_vertical, imlib_image_flip_diagonal
+			img_update_colormodifiers(img);
+			img->tile.cache[0] = imlib_context_get_image();
+			if (img->tile.mode == 1){
+				img->tile.cache[1] = img->tile.cache[0];
+				img->tile.cache[2] = img->tile.cache[0];
+				img->tile.cache[3] = img->tile.cache[0];
+			} else {
+				img->tile.cache[1] = imlib_clone_image();
+				imlib_context_set_image(img->tile.cache[1]);
+				imlib_image_flip_horizontal();
+				imlib_context_set_image(img->tile.cache[0]);
+				img->tile.cache[2] = imlib_clone_image();
+				imlib_context_set_image(img->tile.cache[2]);
+				imlib_image_flip_vertical();
+				imlib_context_set_image(img->tile.cache[0]);
+				img->tile.cache[3] = imlib_clone_image();
+				imlib_context_set_image(img->tile.cache[3]);
+				imlib_image_flip_horizontal();
+				imlib_image_flip_vertical();
+			}
+			img_draw_tiles(img);
+			/*if (img->x >= 0 && img->y >= 0)
 			{
 				warn("simpletiling");
 				for (y = 0; y < winh; y += stepy) {
 					for (x = 0; x < winw; x += stepx) {
-						warn("x,y = %d, %d", x, y);
 						// maybe needs clipping?
 						// anyway appears to work.
+						imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
 						imlib_render_image_part_on_drawable_at_size(0, 0, sw, sh, x, y, dw, dh);
+						tx += 1;
 					}
+					ty += 1;
 				}
 				img->dirty = false;
 				return;
-			}
-			warn("complextiling");
-			initx = img->x * img->zoom;
-			inity = img->y * img->zoom;
-			while (initx > 0)
-				initx -= stepx;
-			while (inity > 0)
-				inity -= stepy;
-			warn("iy %f * iz %f == %f", img->y, img->zoom, img->y * img->zoom);
-			warn("img->x = %f, img->y = %f", img->x, img->y);
-			warn("complextiling, y=range(%d,%d,%d), x=range(%d,%d,%d)", \
-			     inity, win->h, stepy, initx, win->w, stepx);
-			warn("inity (%d) < winh (%d) : %d", inity, winh, inity < winh);
-			warn("initx (%d) < winw (%d) : %d", initx, winw, initx < winw);
-			for (y = inity; y < winh; y+= stepy) {
-				for (x = initx; x < winw; x+= stepx) {
-					warn("x,y = %d, %d", x, y);
-					if (x <= 0) {
-						sx = -x / img->zoom + 0.5;
-						sw = win->w / img->zoom;
-						dx = 0;
-						dw = win->w;
-					} else {
-						sx = 0;
-						sw = img->w;
-						dx = x;
-						dw = img->w * img->zoom;
-					}
-					if (y <= 0) {
-						sy = -y / img->zoom + 0.5;
-						sh = win->h / img->zoom;
-						dy = 0;
-						dh = win->h;
-					} else {
-						sy = 0;
-						sh = img->h;
-						dy = y;
-						dh = img->h * img->zoom;
-					}
-					imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
-
-
-				}
-			}
+			}*/
 		}
 	}
 	img->dirty = false;
@@ -933,12 +1199,15 @@ void img_toggle_negalpha(img_t *img)
 	img_update_colormodifiers(img);
 }
 
-void img_toggle_tiling(img_t *img)
+void img_cycle_tiling(img_t *img)
 {
 	if (img == NULL)
 		return;
-	img->tiling = !img->tiling;
-	// XXX need to force rerender?
+	img->tile.mode = img->tile.mode + 1;
+	if (img->tile.mode > 3)
+		img->tile.mode = 0;
+	if (img->tile.mode > 0)
+	    _img_update_tiling_layout(img, img->tile.mode - 1);
 	img->dirty = true;
 }
 

@@ -61,8 +61,15 @@ typedef struct {
 	int silhouetting;
 	int opacity;
 	bool negate_alpha;
-	bool tiling;
-
+	struct {
+		int mode;
+		int startx;
+		int starty;
+		int tilesx;
+		int tilesy;
+		unsigned char layout[12][12];
+		Imlib_Image cache[4];
+	} tile;
 	struct {
 		bool on;
 		int delay;
@@ -95,6 +102,7 @@ void img_cycle_antialias(img_t*);
 void img_cycle_silhouetting(img_t*);
 void img_toggle_negalpha(img_t*);
 bool img_cycle_opacity(img_t*);
+void img_cycle_tiling(img_t*);
 bool img_change_gamma(img_t*, int);
 
 bool img_frame_navigate(img_t*, int);
