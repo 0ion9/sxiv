@@ -373,14 +373,20 @@ void img_check_pan(img_t *img, bool moved)
 	if (img == NULL || img->im == NULL || img->win == NULL)
 		return;
 
-	// XXX probably needs adjustment to tiling view
+	// notes about img->[xy]:
+	// pressing Right reduces img->x
+	// pressing Left increases it (up to 0, if image is larger than display)
+	// given that right and left DO, in fact, pan right and left,
+	// one probably should conclude that img->x < 0 means (img->x / zoom) pixels off the left of the image.
+	//
 
 	win = img->win;
 	w = img->w * img->zoom;
 	h = img->h * img->zoom;
 	if (img->tile.mode > 0) {
-		w *= 3;
-		h *= 3;
+		// maybe should just set this to win->[wh]?
+		w *= 12;
+		h *= 12;
 	}
 	ox = img->x;
 	oy = img->y;
@@ -398,8 +404,37 @@ void img_check_pan(img_t *img, bool moved)
 	else if (img->y + h < win->h)
 		img->y = win->h - h;
 
+	if (img->tile.mode > 0) {
+		float stepx = img->w * img->zoom;
+		float stepy = img->h * img->zoom;
+		if (img->tile.mode != 1) {
+			stepx *= 12;
+			stepy *= 12;
+		}
+		if (img->x < 0){
+			warn("Cneg x %f", img->x);
+			while (img->x < (-stepx))
+				img->x += stepx;
+			warn("-> %f", img->x);
+		} else {
+			warn("Cpos x %f", img->x);
+			while (img->x > stepx)
+				img->x -= stepx;
+		}
+
+		if (img->y < 0) {
+			warn("Cneg y %f", img->y);
+			while (img->y < (-stepy))
+				img->y += stepy;
+		} else {
+			while (img->y > stepy)
+				img->y -= stepy;
+		}
+	}
+
 	if (!moved && (ox != img->x || oy != img->y))
 		img->dirty = true;
+	warn("check_pan final x,y = %f, %f", img->x, img->y);
 }
 
 void img_update_antialias(img_t *img)
@@ -597,7 +632,6 @@ void img_draw_tiles(img_t *img)
 	int ntiles;
 	int sx, sy, sw, sh;
 	int dx, dy, dw, dh;
-	int clipx, clipy;
 	win_t *win;
 
 	win = img->win;
@@ -616,25 +650,40 @@ void img_draw_tiles(img_t *img)
 	ty = 0;
 	x = img->x;
 	y = img->y;
+	// setup offset into tile pattern
 	if (x < 0){
 		warn("neg x %f", x);
-		while (x < (-img->w * img->zoom))
+		while (x < (-img->w * img->zoom)) {
+			tx--;
 		    x += (img->w * img->zoom);
+		}
 		warn("-> %f", x);
 	} else {
 		warn("pos x %f", x);
-		while (x > (img->w * img->zoom))
+		while (x > (img->w * img->zoom)) {
 		    x -= (img->w * img->zoom);
+		    tx++;
+		}
 	}
 
 	if (y < 0) {
 		warn("neg y %f", y);
-		while (y < (-img->h * img->zoom))
+		while (y < (-img->h * img->zoom)) {
 		    y += (img->h * img->zoom);
+		    ty--;
+		}
 	} else {
-		while (y > (img->h * img->zoom))
+		while (y > (img->h * img->zoom)) {
 		    y -= (img->h * img->zoom);
+		    ty++;
+		}
 	}
+	tx = tx % 12;
+	ty = ty % 12;
+	if (tx < 0)
+	    tx = 12 + tx;
+	if (ty < 0)
+	    ty = 12 + ty;
 	// at this point, a negative x or y will be no more than 99% of a tile offwindow
 	initx = x;
 	inity = y;
@@ -657,13 +706,13 @@ void img_draw_tiles(img_t *img)
 				// anyway appears to work.
 
 				if (x < 0) {
-					//clipx = ;
-					sw = -x / img->zoom + 0.5;
-					sx = img->w - sw;
+					sx = -(x / img->zoom + 0.5);
+					sw = img->w - sx;
 					dw = sw * img->zoom;
 					dx = 0;
 					warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
 					     sx, dx, sw, dw);
+					warn("tx %d, ty %d", tx, ty);
 				} else {
 					sw = img->w;
 					sx = 0;
@@ -672,9 +721,8 @@ void img_draw_tiles(img_t *img)
 				}
 
 				if (y < 0) {
-					//clipy =
-					sh = -y / img->zoom + 0.5;
-					sy = img->h - sh;
+					sy = -(y / img->zoom + 0.5);
+					sh = img->h - sy;
 					dh = sh * img->zoom;
 					dy = 0;
 					warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
@@ -687,11 +735,13 @@ void img_draw_tiles(img_t *img)
 					dy = y;
 				}
 
-				imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
+				imlib_context_set_image(img->tile.cache[img->tile.layout[ty][tx]]);
 				imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 				tx += 1;
+				tx = tx % 12;
 			}
 			ty += 1;
+			ty = ty % 12;
 		}
 	} else {
 		// complextiling has always been broken.
@@ -765,27 +815,55 @@ void img_render(img_t *img)
 	 * XXX needs relocation. Each image render wants to calculate this,
 	 * and when tiling is on, there are many image renders
 	 */
-	if (img->x <= 0) {
-		sx = -img->x / img->zoom + 0.5;
-		sw = win->w / img->zoom;
-		dx = 0;
-		dw = win->w;
+	if (img->tile.mode > 0) {
+		if (img->x < 0) {
+			sw = -img->x / img->zoom + 0.5;
+			sx = img->w - sw;
+			dw = sw * img->zoom;
+			dx = 0;
+		} else {
+			sw = img->w;
+			sx = 0;
+			dx = img->x;
+			dw = img->w * img->zoom;
+		}
+
+		if (img->y < 0) {
+			//clipy =
+			sh = -img->y / img->zoom + 0.5;
+			sy = img->h - sh;
+			dh = sh * img->zoom;
+			dy = 0;
+
+		} else {
+			sh = img->h;
+			sy = 0;
+			dh = img->h * img->zoom;
+			dy = img->y;
+		}
 	} else {
-		sx = 0;
-		sw = img->w;
-		dx = img->x;
-		dw = img->w * img->zoom;
-	}
-	if (img->y <= 0) {
-		sy = -img->y / img->zoom + 0.5;
-		sh = win->h / img->zoom;
-		dy = 0;
-		dh = win->h;
-	} else {
-		sy = 0;
-		sh = img->h;
-		dy = img->y;
-		dh = img->h * img->zoom;
+		if (img->x <= 0) {
+			sx = -img->x / img->zoom + 0.5;
+			sw = win->w / img->zoom;
+			dx = 0;
+			dw = win->w;
+		} else {
+			sx = 0;
+			sw = img->w;
+			dx = img->x;
+			dw = img->w * img->zoom;
+		}
+		if (img->y <= 0) {
+			sy = -img->y / img->zoom + 0.5;
+			sh = win->h / img->zoom;
+			dy = 0;
+			dh = win->h;
+		} else {
+			sy = 0;
+			sh = img->h;
+			dy = img->y;
+			dh = img->h * img->zoom;
+		}
 	}
 
 	win_clear(win);
