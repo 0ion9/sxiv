@@ -22,6 +22,31 @@ Features
 * Display image information in status bar
 
 
+0ion9 Fork notes
+-----------------
+
+This version includes a number of enhancements vs vanilla SXIV:
+
+ * **Do not use a prefix-key to execute key handler**. Any keys you want the keyhandler to receive can just be typed directly (providing they are not already consumed by sxiv, like Space)
+ * **Change numeric prefixes to be escaped** -- for example, in vanilla SXIV where you could type 30<Space>, in this version you type <Escape>30<Space>.
+   This frees up the keys 0-9 for keyhandler use.
+ * Keep content of info-bar visible while invoking keyhandler
+ * Indicate whether this file is marked, and whether any files are marked, in the info bar
+ * In image mode, show only basename of file, not entire path.
+ * **'Stronger' thumbnail zooming ('auto zoom to fit' -- thumbnails are scaled up by an integer factor if there is space available)**. Very useful for pixel art and icons.
+ * **'Auto' setting for AA** -- equivalent to 'yes, if zooming out, no, if zooming in'. Usually for me this means I never need to touch the AA setting.
+   The threshold at which it switches over is configurable in config.h
+ * **Commands to move one file, or all marked files, an offset through the filelist (including to end or start)**. Useful for grouping files.
+ * **Commands to spatially reorder the filelist** -- ie. swap a file with its up/down/left/right neighbour. Can function as a rough collaging system.
+ * **Command to clone a file** -- ie. add another instance of it to the filelist.
+ * **Ensure 'zoom to fit' works properly for really huge images**.
+ * **The ability to display images as silhouettes, with inverted alpha, and with reduced alpha.**
+ * **Tiled display toggle** (repeats image over window surface)
+
+However, note that there is currently an outstanding bug where, if you resize the window smaller than a thumb high/wide, sxiv terminates (and your WM may get confused).
+A temporary workaround is to only resize the window in image mode.
+
+
 Screenshots
 -----------
 
