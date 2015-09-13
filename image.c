@@ -77,6 +77,7 @@ void img_init(img_t *img, win_t *win)
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
 	img->multi.length = 0;
+	img->tiling = true;
 
 	img->cmod = imlib_create_color_modifier();
 	imlib_context_set_color_modifier(img->cmod);
@@ -480,6 +481,9 @@ void img_render(img_t *img)
 	/* calculate source and destination offsets:
 	 *   - part of image drawn on full window, or
 	 *   - full image drawn on part of window
+	 *
+	 * XXX needs relocation. Each image render wants to calculate this,
+	 * and when tiling is on, there are many image renders
 	 */
 	if (img->x <= 0) {
 		sx = -img->x / img->zoom + 0.5;
@@ -520,7 +524,7 @@ void img_render(img_t *img)
 			int i, c, r;
 			DATA32 col[2] = { 0xFF666666, 0xFF999999 };
 			DATA32 * data = imlib_image_get_data();
-
+			// working note: I think this generates a checkerboard pattern.
 			for (r = 0; r < dh; r++) {
 				i = r * dw;
 				if (r == 0 || r == 8) {
@@ -542,7 +546,77 @@ void img_render(img_t *img)
 		imlib_free_image();
 		imlib_context_set_color_modifier(img->cmod);
 	} else {
-		imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
+		// note : for now, tiling is only supported on images without alpha channel.
+		if (img->tiling == false){
+			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
+		} else {
+			int x, y;
+			int stepx, stepy;
+			int initx, inity;
+			int winw, winh;
+			warn("tiling, no alpha");
+			winw = win->w;
+			winh = win->h;
+			stepx = img->w * img->zoom;
+			stepy = img->h * img->zoom;
+			if (img->x >= 0 && img->y >= 0)
+			{
+				warn("simpletiling");
+				for (y = 0; y < winh; y += stepy) {
+					for (x = 0; x < winw; x += stepx) {
+						warn("x,y = %d, %d", x, y);
+						// maybe needs clipping?
+						// anyway appears to work.
+						imlib_render_image_part_on_drawable_at_size(0, 0, sw, sh, x, y, dw, dh);
+					}
+				}
+				img->dirty = false;
+				return;
+			}
+			warn("complextiling");
+			initx = img->x * img->zoom;
+			inity = img->y * img->zoom;
+			while (initx > 0)
+				initx -= stepx;
+			while (inity > 0)
+				inity -= stepy;
+			warn("iy %f * iz %f == %f", img->y, img->zoom, img->y * img->zoom);
+			warn("img->x = %f, img->y = %f", img->x, img->y);
+			warn("complextiling, y=range(%d,%d,%d), x=range(%d,%d,%d)", \
+			     inity, win->h, stepy, initx, win->w, stepx);
+			warn("inity (%d) < winh (%d) : %d", inity, winh, inity < winh);
+			warn("initx (%d) < winw (%d) : %d", initx, winw, initx < winw);
+			for (y = inity; y < winh; y+= stepy) {
+				for (x = initx; x < winw; x+= stepx) {
+					warn("x,y = %d, %d", x, y);
+					if (x <= 0) {
+						sx = -x / img->zoom + 0.5;
+						sw = win->w / img->zoom;
+						dx = 0;
+						dw = win->w;
+					} else {
+						sx = 0;
+						sw = img->w;
+						dx = x;
+						dw = img->w * img->zoom;
+					}
+					if (y <= 0) {
+						sy = -y / img->zoom + 0.5;
+						sh = win->h / img->zoom;
+						dy = 0;
+						dh = win->h;
+					} else {
+						sy = 0;
+						sh = img->h;
+						dy = y;
+						dh = img->h * img->zoom;
+					}
+					imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
+
+
+				}
+			}
+		}
 	}
 	img->dirty = false;
 }
@@ -857,6 +931,15 @@ void img_toggle_negalpha(img_t *img)
 		return;
 	img->negate_alpha = !img->negate_alpha;
 	img_update_colormodifiers(img);
+}
+
+void img_toggle_tiling(img_t *img)
+{
+	if (img == NULL)
+		return;
+	img->tiling = !img->tiling;
+	// XXX need to force rerender?
+	img->dirty = true;
 }
 
 bool img_cycle_opacity(img_t *img)

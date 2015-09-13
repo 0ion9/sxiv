@@ -35,6 +35,7 @@ I_CMD(flip)
 I_CMD(cycle_antialias)
 I_CMD(toggle_alpha)
 I_CMD(toggle_mouse_pos)
+I_CMD(toggle_tiling)
 I_CMD(slideshow)
 
 T_CMD(move_sel)

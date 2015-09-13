@@ -36,6 +36,7 @@ void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
 void remove_file(int, bool);
+void clone_file(int);
 void load_image(int);
 void open_info(void);
 void redraw(void);
@@ -376,6 +377,14 @@ bool ci_toggle_mouse_pos(arg_t a)
 	return true;
 }
 
+bool ci_toggle_tiling(arg_t _)
+{
+	img.tiling = !img.tiling;
+	img.dirty = true;
+	return true;
+}
+
+
 bool ci_scroll(arg_t dir)
 {
 	return img_pan(&img, dir, prefix);
@@ -538,7 +547,6 @@ bool ct_move_and_reorder(arg_t dir)
 {
 	int tn_offset;
 	int old_index;
-	direction_t _dir = (direction_t)(dir);
 	old_index = fileidx;
 	tn_offset = tns_move_selection(&tns, dir, prefix);
 	if (tn_offset != 0) {

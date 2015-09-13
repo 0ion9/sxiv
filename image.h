@@ -61,6 +61,7 @@ typedef struct {
 	int silhouetting;
 	int opacity;
 	bool negate_alpha;
+	bool tiling;
 
 	struct {
 		bool on;
