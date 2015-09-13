@@ -68,7 +68,8 @@ typedef struct {
 		int tilesx;
 		int tilesy;
 		unsigned char layout[12][12];
-		Imlib_Image cache[4];
+		bool dirty_cache;
+		Imlib_Image cache[6];
 	} tile;
 	struct {
 		bool on;

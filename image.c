@@ -51,6 +51,7 @@ void img_update_colormodifiers(img_t *);
 
 void img_init(img_t *img, win_t *win)
 {
+	int i;
 	zoom_min = zoom_levels[0] / 100.0;
 	zoom_max = zoom_levels[ARRLEN(zoom_levels) - 1] / 100.0;
 
@@ -79,6 +80,9 @@ void img_init(img_t *img, win_t *win)
 	img->multi.animate = options->animate;
 	img->multi.length = 0;
 	img->tile.mode = true;
+	for (i = 0; i < ARRLEN(img->tile.cache); i++)
+		img->tile.cache[i] = NULL;
+	img->tile.dirty_cache = true;
 
 	img->cmod = imlib_create_color_modifier();
 	imlib_context_set_color_modifier(img->cmod);
@@ -337,6 +341,7 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	img->h = imlib_image_get_height();
 	img->checkpan = true;
 	img->dirty = true;
+	img->tile.dirty_cache = true;
 
 	return true;
 }
@@ -550,13 +555,24 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 			break;
 		case 2:
 			warn("SETTING RANDOM LAYOUT");
-		    for (y = 0; y < 12; y++) {
+			for (y = 0; y < 12; y++) {
 				for (x = 0; x < 12; x++) {
 					v = random() & 0x3;
 					img->tile.layout[y][x] = v;
 				}
 			}
 			break;
+		case 3:
+			// 4 flips + rot90 + rot270
+			warn("SETTING RANDOM(+rotate) LAYOUT");
+			for (y = 0; y < 12; y++) {
+				for (x = 0; x < 12; x++) {
+					v = random() & 0x5;
+					img->tile.layout[y][x] = v;
+				}
+			}
+			break;
+
 	}
     for (y = 0; y < 12; y++) {
 		for (x = 0; x < 12; x++) {
@@ -623,6 +639,12 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 
 // draw tiles
 // expects img->tile.cache to be prefilled.
+//
+// XXX irregularities in output pixel size at zoom=3.0.
+// rounding error.
+//
+
+
 void img_draw_tiles(img_t *img)
 {
 	float x, y;
@@ -709,7 +731,7 @@ void img_draw_tiles(img_t *img)
 				if (x < 0) {
 					sx = -(x / img->zoom + 0.5);
 					sw = img->w - sx;
-					dw = sw * img->zoom;
+					dw = (sw * img->zoom) + 0.5;
 					dx = 0;
 					warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
 					     sx, dx, sw, dw);
@@ -718,13 +740,13 @@ void img_draw_tiles(img_t *img)
 					sw = img->w;
 					sx = 0;
 					dx = x;
-					dw = img->w * img->zoom;
+					dw = (img->w * img->zoom + 0.5);
 				}
 
 				if (y < 0) {
 					sy = -(y / img->zoom + 0.5);
 					sh = img->h - sy;
-					dh = sh * img->zoom;
+					dh = (sh+ 0.5) * img->zoom;
 					dy = 0;
 					warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
 					     sy, dy, sh, dh);
@@ -732,9 +754,10 @@ void img_draw_tiles(img_t *img)
 				} else {
 					sh = img->h;
 					sy = 0;
-					dh = img->h * img->zoom;
+					dh = (img->h * img->zoom + 0.5);
 					dy = y;
 				}
+
 
 				imlib_context_set_image(img->tile.cache[img->tile.layout[ty][tx]]);
 				imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
@@ -785,6 +808,50 @@ void img_draw_tiles(img_t *img)
 			ty += 1;
 		}
 	}
+}
+
+void img_tiles_recache(img_t *img, bool blend)
+{
+	int i;
+	Imlib_Image im = imlib_context_get_image();
+
+	if (img->tile.dirty_cache != true)
+		return;
+	for (i = 1; i < 6; i++) {
+		if (img->tile.cache[i] != NULL) {
+			imlib_context_set_image(img->tile.cache[i]);
+			imlib_free_image();
+		}
+	}
+	img->tile.cache[0] = im;
+	imlib_context_set_image(im);
+	imlib_context_set_blend(blend);
+	img->tile.cache[1] = imlib_clone_image();
+	imlib_context_set_image(img->tile.cache[1]);
+	imlib_image_flip_horizontal();
+	imlib_context_set_blend(blend);
+	imlib_context_set_image(img->tile.cache[0]);
+	img->tile.cache[2] = imlib_clone_image();
+	imlib_context_set_image(img->tile.cache[2]);
+	imlib_image_flip_vertical();
+	imlib_context_set_blend(blend);
+	imlib_context_set_image(img->tile.cache[0]);
+	img->tile.cache[3] = imlib_clone_image();
+	imlib_context_set_image(img->tile.cache[3]);
+	imlib_image_flip_horizontal();
+	imlib_image_flip_vertical();
+	imlib_context_set_blend(blend);
+	imlib_context_set_image(img->tile.cache[0]);
+	img->tile.cache[4] = imlib_clone_image();
+	imlib_context_set_image(img->tile.cache[4]);
+	imlib_image_orientate(1);
+	imlib_context_set_blend(blend);
+	imlib_context_set_image(img->tile.cache[0]);
+	img->tile.cache[5] = imlib_clone_image();
+	imlib_context_set_image(img->tile.cache[5]);
+	imlib_image_orientate(3);
+	imlib_context_set_blend(blend);
+	img->tile.dirty_cache = false;
 }
 
 void img_render(img_t *img)
@@ -916,32 +983,8 @@ void img_render(img_t *img)
 		if (img->tile.mode > 0) {
 			warn("tiling, alpha");
 			int i;
-			img->tile.cache[0] = imlib_context_get_image();
-			if (img->tile.mode == 1){
-				img->tile.cache[1] = img->tile.cache[0];
-				img->tile.cache[2] = img->tile.cache[0];
-				img->tile.cache[3] = img->tile.cache[0];
-			} else {
-				img->tile.cache[1] = imlib_clone_image();
-				imlib_context_set_image(img->tile.cache[1]);
-				imlib_image_flip_horizontal();
-				imlib_context_set_image(img->tile.cache[0]);
-				img->tile.cache[2] = imlib_clone_image();
-				imlib_context_set_image(img->tile.cache[2]);
-				imlib_image_flip_vertical();
-				imlib_context_set_image(img->tile.cache[0]);
-				img->tile.cache[3] = imlib_clone_image();
-				imlib_context_set_image(img->tile.cache[3]);
-				imlib_image_flip_horizontal();
-				imlib_image_flip_vertical();
-			}
-			// this debugging has revealed the clipping glitch is not caused here.
-			//if (img->zoom == 2.0){
-//				imlib_context_set_image(img->tile.cache[1]);
-				//imlib_image_set_format("png");
-				//imlib_save_image("/tmp/glitch.png");
-				// save image
-			//}
+			if (img->tile.dirty_cache)
+				img_tiles_recache(img, 1);
 			imlib_context_set_blend(1);
 			img_draw_tiles(img);
 
@@ -980,29 +1023,8 @@ void img_render(img_t *img)
 			// otherwise apply in realtime:
 			// imlib_image_flip_horizontal, imlib_image_flip_vertical, imlib_image_flip_diagonal
 			img_update_colormodifiers(img);
-			img->tile.cache[0] = imlib_context_get_image();
-			if (img->tile.mode == 1){
-				img->tile.cache[1] = img->tile.cache[0];
-				img->tile.cache[2] = img->tile.cache[0];
-				img->tile.cache[3] = img->tile.cache[0];
-				imlib_context_set_blend(1);
-			} else {
-				img->tile.cache[1] = imlib_clone_image();
-				imlib_context_set_image(img->tile.cache[1]);
-				imlib_image_flip_horizontal();
-				imlib_context_set_blend(1);
-				imlib_context_set_image(img->tile.cache[0]);
-				img->tile.cache[2] = imlib_clone_image();
-				imlib_context_set_image(img->tile.cache[2]);
-				imlib_image_flip_vertical();
-				imlib_context_set_blend(1);
-				imlib_context_set_image(img->tile.cache[0]);
-				img->tile.cache[3] = imlib_clone_image();
-				imlib_context_set_image(img->tile.cache[3]);
-				imlib_image_flip_horizontal();
-				imlib_image_flip_vertical();
-				imlib_context_set_blend(1);
-			}
+			if (img->tile.dirty_cache)
+				img_tiles_recache(img, 1);
 			img_draw_tiles(img);
 			/*if (img->x >= 0 && img->y >= 0)
 			{
@@ -1342,12 +1364,13 @@ void img_cycle_tiling(img_t *img)
 	if (img == NULL)
 		return;
 	img->tile.mode = img->tile.mode + 1;
-	if (img->tile.mode > 3)
+	if (img->tile.mode > 4)
 		img->tile.mode = 0;
 	if (img->tile.mode > 0)
 	    _img_update_tiling_layout(img, img->tile.mode - 1);
 	img->dirty = true;
 }
+
 
 // XXX hack
 
