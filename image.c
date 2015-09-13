@@ -378,6 +378,10 @@ void img_check_pan(img_t *img, bool moved)
 	win = img->win;
 	w = img->w * img->zoom;
 	h = img->h * img->zoom;
+	if (img->tile.mode > 0) {
+		w *= 3;
+		h *= 3;
+	}
 	ox = img->x;
 	oy = img->y;
 
@@ -639,16 +643,51 @@ void img_draw_tiles(img_t *img)
 	if ((dx + dw) < winw)
 		sw = img->w;
 
+	initx = 0 - img->x;
+	inity = 0 - img->y;
+
+	// note: img->y == -100 means we need to render the bottom 100 px of the image at the top of the display, etc.
+	//
+
 	// XXX use ntiles to decide how large of an area to fill.
 	// actually, that should be part of zoom setup?
-	if (img->x >= 0 && img->y >= 0)	{
-		warn("simpletiling");
-		for (y = 0; y < winh; y += stepy) {
-			for (x = 0; x < winw; x += stepx) {
+	if (img->x >= -88880 && img->y >= -88880)	{
+		warn("simpletiling, img->x = %f, img->y = %f", img->x, img->y);
+		warn("initx = %d, inity = %d", initx, inity);
+		for (y = inity; y < winh; y += stepy) {
+			for (x = initx; x < winw; x += stepx) {
 				// maybe needs clipping?
 				// anyway appears to work.
+
+				if (x < 0) {
+					sw = -(x / img->zoom);
+					sx = img->w - sw;
+					dw = sw * img->zoom;
+					dx = 0;
+					warn("x == %d -> sx, dx = %d, %d; sw, dw = %d, %d", x, \
+					     sx, dx, sw, dw);
+				} else {
+					sw = img->w;
+					sx = 0;
+					dx = x;
+					dw = img->w * img->zoom;
+				}
+
+				if (y < 0) {
+					sh = -(y / img->zoom);
+					sy = img->h - sh;
+					dh = sh * img->zoom;
+					dy = 0;
+
+				} else {
+					sh = img->h;
+					sy = 0;
+					dh = img->h * img->zoom;
+					dy = y;
+				}
+
 				imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
-				imlib_render_image_part_on_drawable_at_size(0, 0, sw, sh, x, y, dw, dh);
+				imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 				tx += 1;
 			}
 			ty += 1;
