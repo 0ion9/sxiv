@@ -356,6 +356,9 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 		return false;
 	}
 	imlib_context_set_image(im);
+	t->had_alpha = imlib_image_has_alpha();
+	if (tns->force_alpha && !t->had_alpha)
+		imlib_image_set_has_alpha(1);
 
 	if (!cache_hit) {
 #if HAVE_LIBEXIF
@@ -384,6 +387,30 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 		while (++tns->loadnext < tns->end && (++t)->im != NULL);
 
 	return true;
+}
+
+void tns_force_alpha(tns_t *tns, bool force)
+{
+	int i;
+	unsigned char alpha_now;
+	thumb_t *t;
+
+	if (tns->cnt == NULL)
+		return;
+	for (i = 0; i < (*tns->cnt); i++) {
+		t = &tns->thumbs[i];
+		if (t->im == NULL)
+			continue;
+		imlib_context_set_image(t->im);
+		alpha_now = imlib_image_has_alpha();
+		if (force && !alpha_now) {
+			imlib_image_set_has_alpha(1);
+		} else if (!force && alpha_now && !t->had_alpha) {
+			imlib_image_set_has_alpha(0);
+		}
+	}
+	tns->force_alpha = force;
+
 }
 
 void tns_unload(tns_t *tns, int n)

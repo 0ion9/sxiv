@@ -31,6 +31,7 @@ typedef struct {
 	int h;
 	int x;
 	int y;
+	int had_alpha;
 } thumb_t;
 
 typedef struct {
@@ -53,6 +54,8 @@ typedef struct {
 	int bw;
 	int dim;
 
+	bool force_alpha;
+
 	bool dirty;
 } tns_t;
 
@@ -67,6 +70,7 @@ void tns_unload(tns_t*, int);
 void tns_render(tns_t*);
 void tns_mark(tns_t*, int, bool);
 void tns_highlight(tns_t*, int, bool);
+void tns_force_alpha(tns_t*, bool);
 
 int tns_move_selection(tns_t*, direction_t, int);
 bool tns_scroll(tns_t*, direction_t, bool);

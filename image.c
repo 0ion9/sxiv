@@ -28,6 +28,7 @@
 #include "options.h"
 #include "util.h"
 #include "config.h"
+#include "thumbs.h"
 
 #if HAVE_LIBEXIF
 #include <libexif/exif-data.h>
@@ -885,6 +886,7 @@ void img_render(img_t *img)
 			int i, c, r;
 			DATA32 col[2] = { 0xFF666666, 0xFF999999 };
 			DATA32 * data = imlib_image_get_data();
+			warn("CHECKS ALPHA");
 			// working note: I think this generates a checkerboard pattern.
 			for (r = 0; r < dh; r++) {
 				i = r * dw;
@@ -897,6 +899,7 @@ void img_render(img_t *img)
 			}
 			imlib_image_put_back_data(data);
 		} else {
+			warn("FLAT ALPHA");
 			c = win->fullscreen ? win->fscol : win->bgcol;
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, dw, dh);
@@ -939,6 +942,7 @@ void img_render(img_t *img)
 				//imlib_save_image("/tmp/glitch.png");
 				// save image
 			//}
+			imlib_context_set_blend(1);
 			img_draw_tiles(img);
 
 			for (i=0; i<4; i++)
@@ -954,6 +958,18 @@ void img_render(img_t *img)
 		img_update_colormodifiers(img);
 	} else {
 		// note : for now, tiling is only supported on images without alpha channel.
+		//img_update_colormodifiers(img);
+		if (img->opacity < 6){
+				// XXX hack. also, thumbnails need set_has_alpha called too.
+				// really, this needs to be done when switching images.
+				imlib_context_set_blend(1);
+				imlib_image_set_has_alpha(1);
+		}
+		else {
+			imlib_context_set_blend(1);
+			imlib_image_set_has_alpha(0);
+		}
+		imlib_context_set_color_modifier(img->cmod);
 		if (img->tile.mode == 0){
 			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 		} else {
@@ -969,19 +985,23 @@ void img_render(img_t *img)
 				img->tile.cache[1] = img->tile.cache[0];
 				img->tile.cache[2] = img->tile.cache[0];
 				img->tile.cache[3] = img->tile.cache[0];
+				imlib_context_set_blend(1);
 			} else {
 				img->tile.cache[1] = imlib_clone_image();
 				imlib_context_set_image(img->tile.cache[1]);
 				imlib_image_flip_horizontal();
+				imlib_context_set_blend(1);
 				imlib_context_set_image(img->tile.cache[0]);
 				img->tile.cache[2] = imlib_clone_image();
 				imlib_context_set_image(img->tile.cache[2]);
 				imlib_image_flip_vertical();
+				imlib_context_set_blend(1);
 				imlib_context_set_image(img->tile.cache[0]);
 				img->tile.cache[3] = imlib_clone_image();
 				imlib_context_set_image(img->tile.cache[3]);
 				imlib_image_flip_horizontal();
 				imlib_image_flip_vertical();
+				imlib_context_set_blend(1);
 			}
 			img_draw_tiles(img);
 			/*if (img->x >= 0 && img->y >= 0)
@@ -1329,6 +1349,10 @@ void img_cycle_tiling(img_t *img)
 	img->dirty = true;
 }
 
+// XXX hack
+
+extern tns_t tns;
+
 bool img_cycle_opacity(img_t *img)
 {
 	int new_opacity;
@@ -1342,6 +1366,8 @@ bool img_cycle_opacity(img_t *img)
 	    img_update_colormodifiers(img);
 	    return true;
 	}
+	if (new_opacity != 6)
+		tns_force_alpha(&tns, true);
 	return false;
 }
 
