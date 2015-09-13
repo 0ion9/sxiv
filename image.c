@@ -589,14 +589,15 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 // expects img->tile.cache to be prefilled.
 void img_draw_tiles(img_t *img)
 {
-	int x, y;
+	float x, y;
 	int tx, ty;
-	int stepx, stepy;
-	int initx, inity;
-	int winw, winh;
+	float stepx, stepy;
+	float initx, inity;
+	float winw, winh;
 	int ntiles;
 	int sx, sy, sw, sh;
 	int dx, dy, dw, dh;
+	int clipx, clipy;
 	win_t *win;
 
 	win = img->win;
@@ -615,36 +616,32 @@ void img_draw_tiles(img_t *img)
 	ty = 0;
 	x = img->x;
 	y = img->y;
-	if (x <= 0) {
-		sx = -x / img->zoom + 0.5;
-		sw = win->w / img->zoom;
-		dx = 0;
-		dw = winw;
+	if (x < 0){
+		warn("neg x %f", x);
+		while (x < (-img->w * img->zoom))
+		    x += (img->w * img->zoom);
+		warn("-> %f", x);
 	} else {
-		sx = 0;
-		sw = img->w;
-		dx = x;
-		dw = img->w * img->zoom;
-	}
-	if (y <= 0) {
-		sy = -y / img->zoom + 0.5;
-		sh = win->h / img->zoom;
-		dy = 0;
-		dh = winh;
-	} else {
-		sy = 0;
-		sh = img->h;
-		dy = y;
-		dh = img->h * img->zoom;
+		warn("pos x %f", x);
+		while (x > (img->w * img->zoom))
+		    x -= (img->w * img->zoom);
 	}
 
-	if ((dy + dh) < winh)
-		sh = img->h;
-	if ((dx + dw) < winw)
-		sw = img->w;
-
-	initx = 0 - img->x;
-	inity = 0 - img->y;
+	if (y < 0) {
+		warn("neg y %f", y);
+		while (y < (-img->h * img->zoom))
+		    y += (img->h * img->zoom);
+	} else {
+		while (y > (img->h * img->zoom))
+		    y -= (img->h * img->zoom);
+	}
+	// at this point, a negative x or y will be no more than 99% of a tile offwindow
+	initx = x;
+	inity = y;
+	/*while (initx < -(img->zoom * img->w))
+	    initx += (img->zoom * img->w);
+	while (inity < -(img->zoom * img->h))
+	    inity += (img->zoom * img->h);*/
 
 	// note: img->y == -100 means we need to render the bottom 100 px of the image at the top of the display, etc.
 	//
@@ -653,18 +650,19 @@ void img_draw_tiles(img_t *img)
 	// actually, that should be part of zoom setup?
 	if (img->x >= -88880 && img->y >= -88880)	{
 		warn("simpletiling, img->x = %f, img->y = %f", img->x, img->y);
-		warn("initx = %d, inity = %d", initx, inity);
+		warn("initx = %f, inity = %f", initx, inity);
 		for (y = inity; y < winh; y += stepy) {
 			for (x = initx; x < winw; x += stepx) {
 				// maybe needs clipping?
 				// anyway appears to work.
 
 				if (x < 0) {
-					sw = -(x / img->zoom);
+					//clipx = ;
+					sw = -x / img->zoom + 0.5;
 					sx = img->w - sw;
 					dw = sw * img->zoom;
 					dx = 0;
-					warn("x == %d -> sx, dx = %d, %d; sw, dw = %d, %d", x, \
+					warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
 					     sx, dx, sw, dw);
 				} else {
 					sw = img->w;
@@ -674,10 +672,13 @@ void img_draw_tiles(img_t *img)
 				}
 
 				if (y < 0) {
-					sh = -(y / img->zoom);
+					//clipy =
+					sh = -y / img->zoom + 0.5;
 					sy = img->h - sh;
 					dh = sh * img->zoom;
 					dy = 0;
+					warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+					     sy, dy, sh, dh);
 
 				} else {
 					sh = img->h;
