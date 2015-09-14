@@ -99,6 +99,8 @@ bool img_pan_edge(img_t*, direction_t);
 void img_rotate(img_t*, degree_t);
 void img_flip(img_t*, flipdir_t);
 
+bool img_need_trans(img_t*);
+
 void img_cycle_antialias(img_t*);
 void img_cycle_silhouetting(img_t*);
 void img_toggle_negalpha(img_t*);

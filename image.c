@@ -47,7 +47,8 @@ static int zoomdiff(float z1, float z2)
 	return (int) (z1 * 1000.0 - z2 * 1000.0);
 }
 
-void img_update_colormodifiers(img_t *);
+void img_update_colormodifiers_current(img_t *);
+void img_update_colormodifiers_none(img_t *);
 
 void img_init(img_t *img, win_t *win)
 {
@@ -79,7 +80,7 @@ void img_init(img_t *img, win_t *win)
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
 	img->multi.length = 0;
-	img->tile.mode = true;
+	img->tile.mode = 0;
 	for (i = 0; i < ARRLEN(img->tile.cache); i++)
 		img->tile.cache[i] = NULL;
 	img->tile.dirty_cache = true;
@@ -87,7 +88,7 @@ void img_init(img_t *img, win_t *win)
 	img->cmod = imlib_create_color_modifier();
 	imlib_context_set_color_modifier(img->cmod);
 	img->gamma = MIN(MAX(options->gamma, -GAMMA_RANGE), GAMMA_RANGE);
-	img_update_colormodifiers(img);
+	img_update_colormodifiers_current(img);
 
 	img->ss.on = options->slideshow > 0;
 	img->ss.delay = options->slideshow > 0 ? options->slideshow * 100 : SLIDESHOW_DELAY * 100;
@@ -309,6 +310,8 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 }
 #endif /* HAVE_GIFLIB */
 
+void img_tiles_recache(img_t *, bool);
+
 bool img_load(img_t *img, const fileinfo_t *file)
 {
 	const char *fmt;
@@ -343,6 +346,11 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	img->dirty = true;
 	img->tile.dirty_cache = true;
 
+	// colormods are pre-applied (cached) in tile mode
+	if (img->tile.mode > 0)
+	    img_tiles_recache(img, 1);
+	else
+		img_update_colormodifiers_current(img);
 	return true;
 }
 
@@ -368,6 +376,20 @@ void img_close(img_t *img, bool decache)
 			imlib_free_image();
 		img->im = NULL;
 	}
+}
+
+bool img_active_colormods(img_t *img)
+{
+	if (img->opacity < 6 || img->negate_alpha || img->silhouetting > 0 || img->gamma > 0)
+		return true;
+	return false;
+}
+
+bool img_need_trans(img_t *img)
+{
+	if (img->opacity < 6)
+	    return true;
+	return false;
 }
 
 void img_check_pan(img_t *img, bool moved)
@@ -532,6 +554,37 @@ static unsigned char _all_adj_layout[6][6] = {
 };
 
 
+/* all_adj including rot90's. generated randomly, with adjacency verif.
+
+'BEDBCADFCCEE'
+'FBCAFCFCDCBE'
+'ECABCACCDFFF'
+'BAFEABDBFDFE'
+'ECEFEBBAEBAD'
+'CFADBEECFDEE'
+'EFBFABADDFDC'
+'FDBAFABDCFED'
+'AADADDDFFAFB'
+'BFEEFCFEDFAC'
+'ADFCEEECBBCA'
+'FEEFEBFCEBCD'
+*/
+
+/* static unsigned char _all_adj_layout12[12][12] = {
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+	{},
+*/
+
 // XXX hardcoded '12' size
 void _img_update_tiling_layout(img_t *img, int layout_index)
 {
@@ -541,7 +594,11 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
     switch (layout_index) {
 		case 0:
 			warn("SETTING NOFLIPS LAYOUT");
-			memset(img->tile.layout, 0, sizeof(*(img->tile.layout)));
+			for (y = 0; y < 12; y++) {
+				for (x = 0; x < 12; x++) {
+					img->tile.layout[y][x] = 0;
+				}
+			}
 			break;
 		case 1:
 			warn("SETTING ALLADJ LAYOUT");
@@ -718,104 +775,75 @@ void img_draw_tiles(img_t *img)
 	// note: img->y == -100 means we need to render the bottom 100 px of the image at the top of the display, etc.
 	//
 
+    // colormodifiers are applied in the caching stage, don't double-apply them
+	img_update_colormodifiers_none(img);
 	// XXX use ntiles to decide how large of an area to fill.
 	// actually, that should be part of zoom setup?
-	if (img->x >= -88880 && img->y >= -88880)	{
-		warn("simpletiling, img->x = %f, img->y = %f", img->x, img->y);
-		warn("initx = %f, inity = %f", initx, inity);
-		for (y = inity; y < winh; y += stepy) {
-			for (x = initx; x < winw; x += stepx) {
-				// maybe needs clipping?
-				// anyway appears to work.
+	warn("simpletiling, img->x = %f, img->y = %f", img->x, img->y);
+	warn("initx = %f, inity = %f", initx, inity);
+	for (y = inity; y < winh; y += stepy) {
+		for (x = initx; x < winw; x += stepx) {
+			// maybe needs clipping?
+			// anyway appears to work.
 
-				if (x < 0) {
-					sx = -(x / img->zoom + 0.5);
-					sw = img->w - sx;
-					dw = (sw * img->zoom) + 0.5;
-					dx = 0;
-					warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
-					     sx, dx, sw, dw);
-					warn("tx %d, ty %d", tx, ty);
-				} else {
-					sw = img->w;
-					sx = 0;
-					dx = x;
-					dw = (img->w * img->zoom + 0.5);
-				}
-
-				if (y < 0) {
-					sy = -(y / img->zoom + 0.5);
-					sh = img->h - sy;
-					dh = (sh+ 0.5) * img->zoom;
-					dy = 0;
-					warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
-					     sy, dy, sh, dh);
-
-				} else {
-					sh = img->h;
-					sy = 0;
-					dh = (img->h * img->zoom + 0.5);
-					dy = y;
-				}
-
-
-				imlib_context_set_image(img->tile.cache[img->tile.layout[ty][tx]]);
-				imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
-				tx += 1;
-				tx = tx % 12;
+			if (x < 0) {
+				sx = -(x / img->zoom + 0.5);
+				sw = img->w - sx;
+				dw = (sw * img->zoom) + 0.5;
+				dx = 0;
+				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
+					 sx, dx, sw, dw);
+				warn("tx %d, ty %d", tx, ty);
+			} else {
+				sw = img->w;
+				sx = 0;
+				dx = x;
+				dw = (img->w * img->zoom + 0.5);
+				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
+					 sx, dx, sw, dw);
 			}
-			ty += 1;
-			ty = ty % 12;
-		}
-	} else {
-		// complextiling has always been broken.
-		initx = img->x * img->zoom;
-		inity = img->y * img->zoom;
-		while (initx > 0)
-			initx -= stepx;
-		while (inity > 0)
-			inity -= stepy;
-		for (y = initx; y < winh; y += stepy) {
-			for (x = inity; x < winw; x += stepx) {
-				// maybe needs clipping?
-				// anyway appears to work.
-				if (x <= 0) {
-					sx = -x / img->zoom + 0.5;
-					sw = win->w / img->zoom;
-					dx = 0;
-					dw = win->w;
-				} else {
-					sx = 0;
-					sw = img->w;
-					dx = x;
-					dw = img->w * img->zoom;
-				}
-				if (y <= 0) {
-					sy = -y / img->zoom + 0.5;
-					sh = win->h / img->zoom;
-					dy = 0;
-					dh = win->h;
-				} else {
-					sy = 0;
-					sh = img->h;
-					dy = y;
-					dh = img->h * img->zoom;
-				}
-				imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
-				imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, x, y, dw, dh);
-				tx += 1;
+
+			if (y < 0) {
+				sy = -(y / img->zoom + 0.5);
+				sh = img->h - sy;
+				dh = (sh+ 0.5) * img->zoom;
+				dy = 0;
+				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+					 sy, dy, sh, dh);
+
+			} else {
+				sh = img->h;
+				sy = 0;
+				dh = (img->h * img->zoom + 0.5);
+				dy = y;
+				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+					 sy, dy, sh, dh);
 			}
-			ty += 1;
+
+
+			imlib_context_set_image(img->tile.cache[img->tile.layout[ty][tx]]);
+			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
+			tx += 1;
+			tx = tx % 12;
 		}
+		ty += 1;
+		ty = ty % 12;
 	}
+	img_update_colormodifiers_current(img);
 }
 
 void img_tiles_recache(img_t *img, bool blend)
 {
 	int i;
-	Imlib_Image im = imlib_context_get_image();
+	Imlib_Image im = img->im;
+	bool need_trans;
 
+    // XXX we need to do the job of rendering the initial image, here
+    // (with or without transparency effects etc)
+    // rather than depending on the caller.
 	if (img->tile.dirty_cache != true)
+		return;
+	if (img->tile.mode == 0)
 		return;
 	for (i = 1; i < 6; i++) {
 		if (img->tile.cache[i] != NULL) {
@@ -823,33 +851,89 @@ void img_tiles_recache(img_t *img, bool blend)
 			imlib_free_image();
 		}
 	}
-	img->tile.cache[0] = im;
 	imlib_context_set_image(im);
+	need_trans = true;
+	if ((imlib_image_has_alpha() == false) && (img->opacity == 6))
+	    need_trans = false;
+	if (!need_trans) {
+		img->tile.cache[0] = imlib_clone_image();
+		imlib_context_set_image(img->tile.cache[0]);
+		img_update_colormodifiers_current(img);
+		imlib_apply_color_modifier();
+		blend = 0;
+	} else {
+		Imlib_Image bg;
+
+		imlib_context_set_image(img->im);
+		// create enough checkerboard/whatever to composite onto...
+		if ((bg = imlib_create_image(img->w, img->h)) == NULL)
+			die("could not allocate memory");
+		imlib_context_set_image(bg);
+		imlib_image_set_has_alpha(0);
+
+		if (img->alpha) {
+			int i, c, r;
+			DATA32 col[2] = { 0xFF666666, 0xFF999999 };
+			DATA32 * data = imlib_image_get_data();
+			warn("CHECKS ALPHA");
+			// working note: I think this generates a checkerboard pattern.
+			for (r = 0; r < img->h; r++) {
+				i = r * img->w;
+				if (r == 0 || r == 8) {
+					for (c = 0; c < img->w; c++)
+						data[i++] = col[!(c & 8) ^ !r];
+				} else {
+					memcpy(&data[i], &data[(r & 8) * img->w], img->w * sizeof(data[0]));
+				}
+			}
+			imlib_image_put_back_data(data);
+		} else {
+			int c;
+			warn("FLAT ALPHA");
+			c = img->win->fullscreen ? img->win->fscol : img->win->bgcol;
+			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
+			imlib_image_fill_rectangle(0, 0, img->w, img->h);
+		}
+		img_update_colormodifiers_current(img);
+		imlib_blend_image_onto_image(img->im, 0, 0, 0, img->w, img->h, 0, 0, img->w, img->h);
+		img->tile.cache[0] = bg;
+		im = bg;
+		need_trans = false;
+		blend = 1;
+	}
+	img_update_colormodifiers_none(img);
+	imlib_context_set_image(im);
+	imlib_image_set_has_alpha(need_trans);
 	imlib_context_set_blend(blend);
 	img->tile.cache[1] = imlib_clone_image();
 	imlib_context_set_image(img->tile.cache[1]);
 	imlib_image_flip_horizontal();
+	imlib_image_set_has_alpha(need_trans);
 	imlib_context_set_blend(blend);
 	imlib_context_set_image(img->tile.cache[0]);
 	img->tile.cache[2] = imlib_clone_image();
 	imlib_context_set_image(img->tile.cache[2]);
 	imlib_image_flip_vertical();
+	imlib_image_set_has_alpha(need_trans);
 	imlib_context_set_blend(blend);
 	imlib_context_set_image(img->tile.cache[0]);
 	img->tile.cache[3] = imlib_clone_image();
 	imlib_context_set_image(img->tile.cache[3]);
 	imlib_image_flip_horizontal();
 	imlib_image_flip_vertical();
+	imlib_image_set_has_alpha(need_trans);
 	imlib_context_set_blend(blend);
 	imlib_context_set_image(img->tile.cache[0]);
 	img->tile.cache[4] = imlib_clone_image();
 	imlib_context_set_image(img->tile.cache[4]);
 	imlib_image_orientate(1);
+	imlib_image_set_has_alpha(need_trans);
 	imlib_context_set_blend(blend);
 	imlib_context_set_image(img->tile.cache[0]);
 	img->tile.cache[5] = imlib_clone_image();
 	imlib_context_set_image(img->tile.cache[5]);
 	imlib_image_orientate(3);
+	imlib_image_set_has_alpha(need_trans);
 	imlib_context_set_blend(blend);
 	img->tile.dirty_cache = false;
 }
@@ -861,6 +945,7 @@ void img_render(img_t *img)
 	int dx, dy, dw, dh;
 	Imlib_Image bg;
 	unsigned long c;
+	bool need_trans;
 
 	if (img == NULL || img->im == NULL || img->win == NULL)
 		return;
@@ -883,55 +968,27 @@ void img_render(img_t *img)
 	 * XXX needs relocation. Each image render wants to calculate this,
 	 * and when tiling is on, there are many image renders
 	 */
-	if (img->tile.mode > 0) {
-		if (img->x < 0) {
-			sw = -img->x / img->zoom + 0.5;
-			sx = img->w - sw;
-			dw = sw * img->zoom;
-			dx = 0;
-		} else {
-			sw = img->w;
-			sx = 0;
-			dx = img->x;
-			dw = img->w * img->zoom;
-		}
-
-		if (img->y < 0) {
-			//clipy =
-			sh = -img->y / img->zoom + 0.5;
-			sy = img->h - sh;
-			dh = sh * img->zoom;
-			dy = 0;
-
-		} else {
-			sh = img->h;
-			sy = 0;
-			dh = img->h * img->zoom;
-			dy = img->y;
-		}
+	if (img->x <= 0) {
+		sx = -img->x / img->zoom + 0.5;
+		sw = win->w / img->zoom;
+		dx = 0;
+		dw = win->w;
 	} else {
-		if (img->x <= 0) {
-			sx = -img->x / img->zoom + 0.5;
-			sw = win->w / img->zoom;
-			dx = 0;
-			dw = win->w;
-		} else {
-			sx = 0;
-			sw = img->w;
-			dx = img->x;
-			dw = img->w * img->zoom;
-		}
-		if (img->y <= 0) {
-			sy = -img->y / img->zoom + 0.5;
-			sh = win->h / img->zoom;
-			dy = 0;
-			dh = win->h;
-		} else {
-			sy = 0;
-			sh = img->h;
-			dy = img->y;
-			dh = img->h * img->zoom;
-		}
+		sx = 0;
+		sw = img->w;
+		dx = img->x;
+		dw = img->w * img->zoom;
+	}
+	if (img->y <= 0) {
+		sy = -img->y / img->zoom + 0.5;
+		sh = win->h / img->zoom;
+		dy = 0;
+		dh = win->h;
+	} else {
+		sy = 0;
+		sh = img->h;
+		dy = img->y;
+		dh = img->h * img->zoom;
 	}
 
 	win_clear(win);
@@ -940,9 +997,13 @@ void img_render(img_t *img)
 	img_update_antialias(img);
 	imlib_context_set_drawable(win->buf.pm);
 
-	// this will be true if image originally had alpha OR if we have an alpha-
-	// modifying colormod active.
-	if (imlib_image_has_alpha()) {
+	// this will be true if image originally had alpha OR lowered opacity
+	// is set.
+	need_trans = img_need_trans(img);
+	if (imlib_image_has_alpha())
+		need_trans = true;
+
+	if (need_trans && img->tile.mode == 0) {
 		// create enough checkerboard/whatever to composite onto...
 		if ((bg = imlib_create_image(dw, dh)) == NULL)
 			die("could not allocate memory");
@@ -975,34 +1036,18 @@ void img_render(img_t *img)
 		// it's set as the context image
 		// we throw the main image onto it.
 		// now would be the time to put it in the img->tile.cache. and generate alts.
-		img_update_colormodifiers(img);
+		img_update_colormodifiers_current(img);
 		// note: sw + sh are too small, either here or inside img_draw_tiles
 
 		imlib_blend_image_onto_image(img->im, 0, sx, sy, sw, sh, 0, 0, dw, dh);
-		imlib_context_set_color_modifier(NULL);
-		if (img->tile.mode > 0) {
-			warn("tiling, alpha");
-			int i;
-			if (img->tile.dirty_cache)
-				img_tiles_recache(img, 1);
-			imlib_context_set_blend(1);
-			img_draw_tiles(img);
-
-			for (i=0; i<4; i++)
-			{
-			    imlib_context_set_image(img->tile.cache[i]);
-			    imlib_free_image();
-			}
-		} else {
-			imlib_render_image_on_drawable(dx, dy);
-			imlib_free_image();
-		}
-		imlib_context_set_color_modifier(img->cmod);
-		img_update_colormodifiers(img);
+		img_update_colormodifiers_none(img);
+		imlib_render_image_on_drawable(dx, dy);
+		imlib_free_image();
+		img_update_colormodifiers_current(img);
 	} else {
 		// note : for now, tiling is only supported on images without alpha channel.
 		//img_update_colormodifiers(img);
-		if (img->opacity < 6){
+		/*if (img->opacity < 6){
 				// XXX hack. also, thumbnails need set_has_alpha called too.
 				// really, this needs to be done when switching images.
 				imlib_context_set_blend(1);
@@ -1011,39 +1056,20 @@ void img_render(img_t *img)
 		else {
 			imlib_context_set_blend(1);
 			imlib_image_set_has_alpha(0);
-		}
-		imlib_context_set_color_modifier(img->cmod);
+		}*/
+		//imlib_context_set_color_modifier(img->cmod);
 		if (img->tile.mode == 0){
+			//img_update_colormodifiers_current(img);
 			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 		} else {
-			warn("tiling, no alpha");
-			//warn("NTILES %d", ntiles);
-			// XXX support vhflip variants.
-			// when image is relatively small or ntiles >16, img->tile.cache these variants before draw.
-			// otherwise apply in realtime:
-			// imlib_image_flip_horizontal, imlib_image_flip_vertical, imlib_image_flip_diagonal
-			img_update_colormodifiers(img);
+			warn("tiling");
+			// cmods are handled inside these:
 			if (img->tile.dirty_cache)
 				img_tiles_recache(img, 1);
 			img_draw_tiles(img);
-			/*if (img->x >= 0 && img->y >= 0)
-			{
-				warn("simpletiling");
-				for (y = 0; y < winh; y += stepy) {
-					for (x = 0; x < winw; x += stepx) {
-						// maybe needs clipping?
-						// anyway appears to work.
-						imlib_context_set_image(img->tile.cache[img->tile.layout[ty % 12][tx % 12]]);
-						imlib_render_image_part_on_drawable_at_size(0, 0, sw, sh, x, y, dw, dh);
-						tx += 1;
-					}
-					ty += 1;
-				}
-				img->dirty = false;
-				return;
-			}*/
 		}
 	}
+	imlib_context_set_image(img->im);
 	img->dirty = false;
 }
 
@@ -1276,7 +1302,7 @@ void img_cycle_antialias(img_t *img)
 	img_update_antialias(img);
 }
 
-void img_update_colormodifiers(img_t *img)
+void img_update_colormodifiers(img_t *img, int gamma, int silhouetting, bool negate_alpha, int opacity)
 {
 	double range;
 	unsigned int i;
@@ -1286,6 +1312,15 @@ void img_update_colormodifiers(img_t *img)
 	DATA8 a[256];
 	if (img == NULL)
 		return;
+	img->dirty = true;
+	// always begin by resetting.
+	imlib_get_color_modifier_tables(r, g, b, a);
+	for (i=0;i < 256; i++) {
+			r[i] = i;
+			g[i] = i;
+			b[i] = i;
+			a[i] = i;
+	}
 	// here, we handle the:
 	//  * silhouetting
 	//  * negate alpha
@@ -1293,34 +1328,23 @@ void img_update_colormodifiers(img_t *img)
 	//  * gamma
 	// options.
 	//
-	if (img->silhouetting == 0)
-	{
-		imlib_reset_color_modifier();
-		// not sure what is happening here, but this isn't being reset properly when silhouetting hits 0, so I'm forcing it
-		imlib_get_color_modifier_tables(r, g, b, a);
-		for (i=0;i < 256; i++) {
-			r[i] = i;
-			g[i] = i;
-			b[i] = i;
-			a[i] = i;
-		}
-		//r[255] = 255;
-		//g[255] = 255;
-		//b[255] = 255;
+	// note that we don't take values directly from img, because
+	// certain cases require us to ignore the settings on img.
+
+	if (gamma != 0) {
 		imlib_set_color_modifier_tables(r, g, b, a);
-		if (img->gamma != 0) {
-			range = img->gamma <= 0 ? 1.0 : GAMMA_MAX - 1.0;
-			imlib_modify_color_modifier_gamma(1.0 + img->gamma * (range / GAMMA_RANGE));
-		}
+		range = gamma <= 0 ? 1.0 : GAMMA_MAX - 1.0;
+		imlib_modify_color_modifier_gamma(1.0 + gamma * (range / GAMMA_RANGE));
+		imlib_get_color_modifier_tables(r, g, b, a);
 	}
-	img->dirty = true;
-	if (img->negate_alpha == 0 && img->opacity == 6 && img->silhouetting == 0)
+
+	if (negate_alpha == 0 && opacity == 6 && silhouetting == 0)
+	{
+		imlib_set_color_modifier_tables(r, g, b, a);
 		return;
-	else {
+	} else {
 		int i;
-		bool negate_alpha = img->negate_alpha;
-		int opacity = img->opacity;
-		int silhouetting = img->silhouetting - 1;
+		silhouetting = silhouetting - 1;
 
 		imlib_get_color_modifier_tables(r, g, b, a);
 		// silhouetting is the only effect aside from gamma that changes rgb
@@ -1335,8 +1359,17 @@ void img_update_colormodifiers(img_t *img)
 		for (i=0;i < 256; i++) {
 			a[i] = ((negate_alpha ? 255 - i: i ) * opacity) / 6;
 		}
-		imlib_set_color_modifier_tables(r, g, b, a);
+
 	}
+	imlib_set_color_modifier_tables(r, g, b, a);
+}
+
+void img_update_colormodifiers_current(img_t *img) {
+	img_update_colormodifiers(img, img->gamma, img->silhouetting, img->negate_alpha, img->opacity);
+}
+
+void img_update_colormodifiers_none(img_t *img) {
+	img_update_colormodifiers(img, 0, 0, false, 6);
 }
 
 void img_cycle_silhouetting(img_t *img)
@@ -1348,7 +1381,9 @@ void img_cycle_silhouetting(img_t *img)
 	// XXX needs testing.
 	if (img->silhouetting > ARRLEN(SILHOUETTE_COLOR))
 	    img->silhouetting = 0;
-	img_update_colormodifiers(img);
+	img_update_colormodifiers_current(img);
+	img->tile.dirty_cache = 1;
+	//img_tiles_recache(img, 1);
 }
 
 void img_toggle_negalpha(img_t *img)
@@ -1356,7 +1391,9 @@ void img_toggle_negalpha(img_t *img)
 	if (img == NULL)
 		return;
 	img->negate_alpha = !img->negate_alpha;
-	img_update_colormodifiers(img);
+	img_update_colormodifiers_current(img);
+	img->tile.dirty_cache = true;
+	//img_tiles_recache(img, 1);
 }
 
 void img_cycle_tiling(img_t *img)
@@ -1367,7 +1404,12 @@ void img_cycle_tiling(img_t *img)
 	if (img->tile.mode > 4)
 		img->tile.mode = 0;
 	if (img->tile.mode > 0)
+	{
 	    _img_update_tiling_layout(img, img->tile.mode - 1);
+	    img_tiles_recache(img, 1);
+	}
+	if (img->tile.mode < 2)
+		img->checkpan = true;
 	img->dirty = true;
 }
 
@@ -1386,13 +1428,15 @@ bool img_cycle_opacity(img_t *img)
 		new_opacity = 1;
 	if (new_opacity != img->opacity){
 		img->opacity = new_opacity;
-	    img_update_colormodifiers(img);
+		img_update_colormodifiers_current(img);
+	    img->tile.dirty_cache = 1;
+//		img_tiles_recache(img, 1);
 	    return true;
 	}
-	if (new_opacity != 6)
-		tns_force_alpha(&tns, true);
 	return false;
 }
+
+
 
 bool img_change_gamma(img_t *img, int d)
 {
@@ -1412,7 +1456,9 @@ bool img_change_gamma(img_t *img, int d)
 
 	if (img->gamma != gamma) {
 		img->gamma = gamma;
-		img_update_colormodifiers(img);
+		img_update_colormodifiers_current(img);
+		img->tile.dirty_cache = 1;
+		img_tiles_recache(img, 1);
 		return true;
 	} else {
 		return false;

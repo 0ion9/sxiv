@@ -184,6 +184,7 @@ void tns_init(tns_t *tns, fileinfo_t *files, const int *cnt, int *sel,
 	tns->zl = MIN(default_thumbsize_index, sizeof(thumb_sizes) / sizeof(int));
 	tns->zl = MAX(0, tns->zl);
 	tns->zmultl = 0;
+	tns->need_alpha = false;
 	tns_zoom(tns, 1);
 
 	if ((homedir = getenv("XDG_CACHE_HOME")) == NULL || homedir[0] == '\0') {
@@ -356,10 +357,6 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 		return false;
 	}
 	imlib_context_set_image(im);
-	t->had_alpha = imlib_image_has_alpha();
-	if (tns->force_alpha && !t->had_alpha)
-		imlib_image_set_has_alpha(1);
-
 	if (!cache_hit) {
 #if HAVE_LIBEXIF
 		exif_auto_orientate(file);
@@ -387,30 +384,6 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 		while (++tns->loadnext < tns->end && (++t)->im != NULL);
 
 	return true;
-}
-
-void tns_force_alpha(tns_t *tns, bool force)
-{
-	int i;
-	unsigned char alpha_now;
-	thumb_t *t;
-
-	if (tns->cnt == NULL)
-		return;
-	for (i = 0; i < (*tns->cnt); i++) {
-		t = &tns->thumbs[i];
-		if (t->im == NULL)
-			continue;
-		imlib_context_set_image(t->im);
-		alpha_now = imlib_image_has_alpha();
-		if (force && !alpha_now) {
-			imlib_image_set_has_alpha(1);
-		} else if (!force && alpha_now && !t->had_alpha) {
-			imlib_image_set_has_alpha(0);
-		}
-	}
-	tns->force_alpha = force;
-
 }
 
 void tns_unload(tns_t *tns, int n)
@@ -518,6 +491,10 @@ void tns_render(tns_t *tns)
 			t->y = y + (((thumb_sizes[tns->zl] * zoom ) / 100) \
 			         - ((t->h * zoom * fitmul) / 100)) / 2;
 			imlib_context_set_image(t->im);
+			if (tns->need_alpha && !imlib_image_has_alpha()) {
+				imlib_context_set_image(imlib_clone_image());
+				imlib_image_set_has_alpha(1);
+			}
 			if ((zoom * fitmul) <= THUMBNAIL_PIXELIZE_AT)
 				imlib_context_set_anti_alias(1);
 			else
@@ -526,6 +503,10 @@ void tns_render(tns_t *tns)
 				(t->w * zoom * fitmul) / 100, (t->h * zoom * fitmul) / 100);
 			if (tns->files[i].flags & FF_MARK)
 				tns_mark(tns, i, true);
+			if (t->im != imlib_context_get_image()) {
+				imlib_free_image();
+				imlib_context_set_image(t->im);
+			}
 		} else {
 			tns->loadnext = MIN(tns->loadnext, i);
 		}

@@ -495,21 +495,25 @@ bool ci_cycle_antialias(arg_t _)
 bool cg_cycle_silhouetting(arg_t _)
 {
 	img_cycle_silhouetting(&img);
-	tns.dirty = true;
+	if (mode == MODE_THUMB)
+		tns.dirty = true;
 	return true;
 }
 
 bool cg_cycle_opacity(arg_t _)
 {
 	img_cycle_opacity(&img);
-	tns.dirty = true;
+	if (mode == MODE_THUMB)
+		tns.dirty = true;
+	tns.need_alpha = (img.opacity !=6);
 	return true;
 }
 
 bool cg_toggle_negalpha(arg_t _)
 {
 	img_toggle_negalpha(&img);
-	tns.dirty = true;
+	if (mode == MODE_THUMB)
+		tns.dirty = true;
 	return true;
 }
 
@@ -518,6 +522,7 @@ bool ci_toggle_alpha(arg_t _)
 {
 	img.alpha = !img.alpha;
 	img.dirty = true;
+	img.tile.dirty_cache = true;
 	return true;
 }
 
