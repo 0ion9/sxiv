@@ -946,6 +946,7 @@ void img_render(img_t *img)
 	Imlib_Image bg;
 	unsigned long c;
 	bool need_trans;
+	int tiling;
 
 	if (img == NULL || img->im == NULL || img->win == NULL)
 		return;
@@ -1003,7 +1004,11 @@ void img_render(img_t *img)
 	if (imlib_image_has_alpha())
 		need_trans = true;
 
-	if (need_trans && img->tile.mode == 0) {
+	tiling = img->tile.mode;
+	// disable tiling when (w * h * nframes * channels(rgba) * ncachedtiles) > 100mb
+	if ((img->w * img->h * img->multi.length * 4 * 6) > (1024 * 1024 * 100))
+		tiling = 0;
+	if (need_trans && tiling == 0) {
 		// create enough checkerboard/whatever to composite onto...
 		if ((bg = imlib_create_image(dw, dh)) == NULL)
 			die("could not allocate memory");
