@@ -791,16 +791,16 @@ void img_draw_tiles(img_t *img)
 				sw = img->w - sx;
 				dw = (sw * img->zoom) + 0.5;
 				dx = 0;
-				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
-					 sx, dx, sw, dw);
+//				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
+//					 sx, dx, sw, dw);
 				warn("tx %d, ty %d", tx, ty);
 			} else {
 				sw = img->w;
 				sx = 0;
 				dx = x;
 				dw = (img->w * img->zoom + 0.5);
-				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
-					 sx, dx, sw, dw);
+//				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
+//					 sx, dx, sw, dw);
 			}
 
 			if (y < 0) {
@@ -808,16 +808,16 @@ void img_draw_tiles(img_t *img)
 				sh = img->h - sy;
 				dh = (sh+ 0.5) * img->zoom;
 				dy = 0;
-				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
-					 sy, dy, sh, dh);
+//				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+//					 sy, dy, sh, dh);
 
 			} else {
 				sh = img->h;
 				sy = 0;
 				dh = (img->h * img->zoom + 0.5);
 				dy = y;
-				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
-					 sy, dy, sh, dh);
+//				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+//					 sy, dy, sh, dh);
 			}
 
 
@@ -1015,7 +1015,6 @@ void img_render(img_t *img)
 			DATA32 col[2] = { 0xFF666666, 0xFF999999 };
 			DATA32 * data = imlib_image_get_data();
 			warn("CHECKS ALPHA");
-			// working note: I think this generates a checkerboard pattern.
 			for (r = 0; r < dh; r++) {
 				i = r * dw;
 				if (r == 0 || r == 8) {
@@ -1032,12 +1031,8 @@ void img_render(img_t *img)
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, dw, dh);
 		}
-		// so, now we have our BG.
-		// it's set as the context image
-		// we throw the main image onto it.
-		// now would be the time to put it in the img->tile.cache. and generate alts.
+
 		img_update_colormodifiers_current(img);
-		// note: sw + sh are too small, either here or inside img_draw_tiles
 
 		imlib_blend_image_onto_image(img->im, 0, sx, sy, sw, sh, 0, 0, dw, dh);
 		img_update_colormodifiers_none(img);
@@ -1045,21 +1040,7 @@ void img_render(img_t *img)
 		imlib_free_image();
 		img_update_colormodifiers_current(img);
 	} else {
-		// note : for now, tiling is only supported on images without alpha channel.
-		//img_update_colormodifiers(img);
-		/*if (img->opacity < 6){
-				// XXX hack. also, thumbnails need set_has_alpha called too.
-				// really, this needs to be done when switching images.
-				imlib_context_set_blend(1);
-				imlib_image_set_has_alpha(1);
-		}
-		else {
-			imlib_context_set_blend(1);
-			imlib_image_set_has_alpha(0);
-		}*/
-		//imlib_context_set_color_modifier(img->cmod);
-		if (img->tile.mode == 0){
-			//img_update_colormodifiers_current(img);
+		if (tiling == 0){
 			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 		} else {
 			warn("tiling");
