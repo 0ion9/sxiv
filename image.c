@@ -1368,7 +1368,8 @@ void img_cycle_silhouetting(img_t *img)
 	if (img->silhouetting > ARRLEN(SILHOUETTE_COLOR))
 	    img->silhouetting = 0;
 	img_update_colormodifiers_current(img);
-	img->tile.dirty_cache = 1;
+	img->tile.dirty_cache = true;
+	img->dirty = true;
 	//img_tiles_recache(img, 1);
 }
 
@@ -1379,6 +1380,7 @@ void img_toggle_negalpha(img_t *img)
 	img->negate_alpha = !img->negate_alpha;
 	img_update_colormodifiers_current(img);
 	img->tile.dirty_cache = true;
+	img->dirty = true;
 	//img_tiles_recache(img, 1);
 }
 
