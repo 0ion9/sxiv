@@ -791,16 +791,16 @@ void img_draw_tiles(img_t *img)
 				sw = img->w - sx;
 				dw = (sw * img->zoom) + 0.5;
 				dx = 0;
-//				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
-//					 sx, dx, sw, dw);
+/*				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
+					 sx, dx, sw, dw); */
 				warn("tx %d, ty %d", tx, ty);
 			} else {
 				sw = img->w;
 				sx = 0;
 				dx = x;
 				dw = (img->w * img->zoom + 0.5);
-//				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
-//					 sx, dx, sw, dw);
+/*				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
+					 sx, dx, sw, dw); */
 			}
 
 			if (y < 0) {
@@ -808,16 +808,16 @@ void img_draw_tiles(img_t *img)
 				sh = img->h - sy;
 				dh = (sh+ 0.5) * img->zoom;
 				dy = 0;
-//				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
-//					 sy, dy, sh, dh);
+/*				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+					 sy, dy, sh, dh); */
 
 			} else {
 				sh = img->h;
 				sy = 0;
 				dh = (img->h * img->zoom + 0.5);
 				dy = y;
-//				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
-//					 sy, dy, sh, dh);
+/*				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
+					 sy, dy, sh, dh); */
 			}
 
 
