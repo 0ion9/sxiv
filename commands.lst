@@ -36,6 +36,7 @@ I_CMD(cycle_antialias)
 I_CMD(toggle_alpha)
 I_CMD(toggle_mouse_pos)
 I_CMD(cycle_tiling)
+I_CMD(cycle_scalefactor)
 I_CMD(slideshow)
 
 T_CMD(move_sel)

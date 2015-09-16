@@ -65,6 +65,8 @@ void img_init(img_t *img, win_t *win)
 
 	img->im = NULL;
 	img->win = win;
+	img->wmul = 1;
+	img->hmul = 1;
 	img->scalemode = options->scalemode;
 	img->zoom = options->zoom;
 	img->zoom = MAX(img->zoom, zoom_min);
@@ -409,8 +411,8 @@ void img_check_pan(img_t *img, bool moved)
 	//
 
 	win = img->win;
-	w = img->w * img->zoom;
-	h = img->h * img->zoom;
+	w = (img->w * img->zoom) * img->wmul;
+	h = (img->h * img->zoom) * img->hmul;
 	if (img->tile.mode > 0) {
 		// maybe should just set this to win->[wh]?
 		w *= 12;
@@ -473,7 +475,12 @@ void img_update_antialias(img_t *img)
 	newaa = oldaa;
 
 	if (img->aa == 2) {
-		if ((img->zoom - IMAGE_PIXELIZE_AT) < -0.001)
+		float minmul;
+		if (img->wmul <= img->hmul)
+			minmul = img->zoom / img->wmul;
+		else
+			minmul = img->zoom / img->hmul;
+		if ((minmul  - IMAGE_PIXELIZE_AT) < -0.001)
 			newaa = 1;
 		else
 			newaa = 0;
@@ -705,6 +712,7 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 void img_draw_tiles(img_t *img)
 {
 	float x, y;
+	float xzoom, yzoom;
 	int tx, ty;
 	float stepx, stepy;
 	float initx, inity;
@@ -715,17 +723,19 @@ void img_draw_tiles(img_t *img)
 	win_t *win;
 
 	win = img->win;
-	ntiles = win->w / (img->w * img->zoom);
-	if ((ntiles * (img->w * img->zoom)) < win->w)
+	ntiles = win->w / (img->w * img->zoom * img->wmul);
+	if ((ntiles * (img->w * img->zoom * img->wmul)) < win->w)
 		ntiles++;
-	dh = win->h / (img->h * img->zoom);
-	if ((dh * (img->h * img->zoom)) < win->h);
+	dh = win->h / (img->h * img->zoom * img->hmul);
+	if ((dh * (img->h * img->zoom * img->hmul)) < win->h);
 		dh++;
 	ntiles = ntiles * dh;
 	winw = win->w;
 	winh = win->h;
-	stepx = img->w * img->zoom;
-	stepy = img->h * img->zoom;
+	xzoom = img->zoom * img->wmul;
+	yzoom = img->zoom * img->hmul;
+	stepx = img->w * xzoom;
+	stepy = img->h * yzoom;
 	tx = 0;
 	ty = 0;
 	x = img->x;
@@ -733,28 +743,28 @@ void img_draw_tiles(img_t *img)
 	// setup offset into tile pattern
 	if (x < 0){
 		warn("neg x %f", x);
-		while (x < (-img->w * img->zoom)) {
+		while (x < (-img->w * xzoom)) {
 			tx--;
-		    x += (img->w * img->zoom);
+		    x += (img->w * xzoom);
 		}
 		warn("-> %f", x);
 	} else {
 		warn("pos x %f", x);
-		while (x > (img->w * img->zoom)) {
-		    x -= (img->w * img->zoom);
+		while (x > (img->w * xzoom)) {
+		    x -= (img->w * xzoom);
 		    tx++;
 		}
 	}
 
 	if (y < 0) {
 		warn("neg y %f", y);
-		while (y < (-img->h * img->zoom)) {
-		    y += (img->h * img->zoom);
+		while (y < (-img->h * yzoom)) {
+		    y += (img->h * yzoom);
 		    ty--;
 		}
 	} else {
-		while (y > (img->h * img->zoom)) {
-		    y -= (img->h * img->zoom);
+		while (y > (img->h * yzoom)) {
+		    y -= (img->h * yzoom);
 		    ty++;
 		}
 	}
@@ -787,9 +797,9 @@ void img_draw_tiles(img_t *img)
 			// anyway appears to work.
 
 			if (x < 0) {
-				sx = -(x / img->zoom + 0.5);
+				sx = -(x / xzoom + 0.5);
 				sw = img->w - sx;
-				dw = (sw * img->zoom) + 0.5;
+				dw = (sw * xzoom) + 0.5;
 				dx = 0;
 /*				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
 					 sx, dx, sw, dw); */
@@ -798,15 +808,15 @@ void img_draw_tiles(img_t *img)
 				sw = img->w;
 				sx = 0;
 				dx = x;
-				dw = (img->w * img->zoom + 0.5);
+				dw = (img->w * xzoom + 0.5);
 /*				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
 					 sx, dx, sw, dw); */
 			}
 
 			if (y < 0) {
-				sy = -(y / img->zoom + 0.5);
+				sy = -(y / yzoom + 0.5);
 				sh = img->h - sy;
-				dh = (sh+ 0.5) * img->zoom;
+				dh = (sh+ 0.5) * yzoom;
 				dy = 0;
 /*				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
 					 sy, dy, sh, dh); */
@@ -814,7 +824,7 @@ void img_draw_tiles(img_t *img)
 			} else {
 				sh = img->h;
 				sy = 0;
-				dh = (img->h * img->zoom + 0.5);
+				dh = (img->h * yzoom + 0.5);
 				dy = y;
 /*				warn("@ %f, y == %f -> sy, dy = %d, %d; sh, dh = %d, %d", img->zoom, y, \
 					 sy, dy, sh, dh); */
@@ -947,6 +957,7 @@ void img_render(img_t *img)
 	unsigned long c;
 	bool need_trans;
 	int tiling;
+	int imgw, imgh;
 
 	if (img == NULL || img->im == NULL || img->win == NULL)
 		return;
@@ -962,6 +973,9 @@ void img_render(img_t *img)
 	if (!img->dirty)
 		return;
 
+	imgw = img->w * img->wmul;
+	imgh = img->h * img->hmul;
+
 	/* calculate source and destination offsets:
 	 *   - part of image drawn on full window, or
 	 *   - full image drawn on part of window
@@ -970,26 +984,26 @@ void img_render(img_t *img)
 	 * and when tiling is on, there are many image renders
 	 */
 	if (img->x <= 0) {
-		sx = -img->x / img->zoom + 0.5;
-		sw = win->w / img->zoom;
+		sx = -(img->x / img->wmul) / img->zoom + 0.5;
+		sw = win->w / (img->zoom * img->wmul);
 		dx = 0;
 		dw = win->w;
 	} else {
 		sx = 0;
 		sw = img->w;
 		dx = img->x;
-		dw = img->w * img->zoom;
+		dw = imgw * img->zoom;
 	}
 	if (img->y <= 0) {
-		sy = -img->y / img->zoom + 0.5;
-		sh = win->h / img->zoom;
+		sy = -(img->y / img->hmul) / img->zoom + 0.5;
+		sh = win->h / (img->zoom * img->hmul);
 		dy = 0;
 		dh = win->h;
 	} else {
 		sy = 0;
 		sh = img->h;
 		dy = img->y;
-		dh = img->h * img->zoom;
+		dh = imgh * img->zoom;
 	}
 
 	win_clear(win);
@@ -1090,8 +1104,8 @@ bool img_zoom(img_t *img, float z)
 	img->scalemode = SCALE_ZOOM;
 
 	if (zoomdiff(z, img->zoom) != 0) {
-		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / img->zoom;
-		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / img->zoom;
+		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / (img->zoom * img->wmul);
+		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->zoom * img->hmul);
 		img->zoom = z;
 		img->checkpan = true;
 		img_update_antialias(img);
@@ -1201,11 +1215,11 @@ bool img_pan_edge(img_t *img, direction_t dir)
 	if (dir & DIR_LEFT)
 		img->x = 0;
 	if (dir & DIR_RIGHT)
-		img->x = img->win->w - img->w * img->zoom;
+		img->x = img->win->w - (img->w * img->zoom * img->wmul);
 	if (dir & DIR_UP)
 		img->y = 0;
 	if (dir & DIR_DOWN)
-		img->y = img->win->h - img->h * img->zoom;
+		img->y = img->win->h - (img->h * img->zoom * img->hmul);
 
 	img_check_pan(img, true);
 
@@ -1447,10 +1461,62 @@ bool img_change_gamma(img_t *img, int d)
 		img_update_colormodifiers_current(img);
 		img->tile.dirty_cache = 1;
 		img_tiles_recache(img, 1);
+		img->dirty = true;
 		return true;
 	} else {
 		return false;
 	}
+}
+
+static int _scale_factors[23][2] = {
+  {1, 1},
+  {2, 1},
+  {1, 2},
+  {3, 1},
+  {1, 3},
+  {3, 2},
+  {2, 3},
+  {4, 1},
+  {1, 4},
+  {4, 3},
+  {3, 4},
+  {5, 1},
+  {1, 5},
+  {5, 2},
+  {2, 5},
+  {5, 3},
+  {3, 5},
+  {5, 4},
+  {4, 5},
+  {6, 1},
+  {1, 6},
+  {6, 5},
+  {5, 6},
+};
+
+void img_cycle_scalefactors(img_t *img)
+{
+	int i;
+	bool ok = false;
+
+	for (i=0; i<ARRLEN(_scale_factors); i++) {
+		if ((_scale_factors[i][0] == img->wmul) && (_scale_factors[i][1] == img->hmul)) {
+			ok = true;
+			break;
+		}
+	}
+	if (ok == false)
+		i = 0;
+	else
+		i++;
+	warn("Scale factor index = %d", i - 1);
+	if (i >= ARRLEN(_scale_factors))
+		i = 0;
+	warn("New scale factor index = %d", i);
+	img->wmul = _scale_factors[i][0];
+	img->hmul = _scale_factors[i][1];
+	img->checkpan = true;
+	img->dirty = true;
 }
 
 bool img_frame_goto(img_t *img, int n)

@@ -42,6 +42,8 @@ typedef struct {
 	Imlib_Image im;
 	int w;
 	int h;
+	int wmul;
+	int hmul;
 
 	win_t *win;
 	float x;
@@ -104,8 +106,9 @@ bool img_need_trans(img_t*);
 void img_cycle_antialias(img_t*);
 void img_cycle_silhouetting(img_t*);
 void img_toggle_negalpha(img_t*);
-bool img_cycle_opacity(img_t*);
+bool img_cycle_opacity(img_t*, int);
 void img_cycle_tiling(img_t*);
+void img_cycle_scalefactors(img_t*);
 bool img_change_gamma(img_t*, int);
 
 bool img_frame_navigate(img_t*, int);

@@ -492,6 +492,47 @@ bool ci_cycle_antialias(arg_t _)
 	return true;
 }
 
+bool ci_cycle_scalefactor(arg_t s)
+{
+	if (prefix != 0)
+		s = prefix;
+	warn("cycle_sf arg = %d", s);
+	if (s > 99)
+		return false;
+	if ((s != 0) && ((s % 10) == 0))
+		return false;
+	if (s==0) {
+		img_cycle_scalefactors(&img);
+	} else {
+		// input '1' to reset scales, for example.
+		if (s < 10) {
+			img.wmul = s;
+			img.hmul = 1;
+		} else {
+			int fac;
+			img.wmul = s / 10;
+			img.hmul = s % 10;
+			if (img.wmul == img.hmul) {
+				img.wmul = 1;
+				img.hmul = 1;
+			} else {
+				for (fac=2; fac < 10; fac++) {
+					if (((img.wmul % fac) == 0) && ((img.hmul % fac) == 0)) {
+						img.wmul = img.wmul / fac;
+						img.hmul = img.hmul / fac;
+						break;
+					}
+				}
+			}
+			warn("final w/hmul = %dx%d", img.wmul, img.hmul);
+		}
+		img.dirty = true;
+		img.checkpan = true;
+	}
+	return true;
+}
+
+
 bool cg_cycle_silhouetting(arg_t _)
 {
 	img_cycle_silhouetting(&img);
