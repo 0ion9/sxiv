@@ -1,4 +1,4 @@
-#define PIXELIZE_AT 200
+#define PIXELIZE_AT 199.4999
 
 #ifdef _WINDOW_CONFIG
 
