@@ -69,6 +69,10 @@ bool cg_quit(arg_t _)
 				printf("%s\n", files[i].name);
 		}
 	}
+	if (options->all_to_stdout) {
+		for (i = 0; i < filecnt; i++)
+			printf("%s\n", files[i].name);
+	}
 	cleanup();
 	exit(EXIT_SUCCESS);
 }

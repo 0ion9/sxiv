@@ -27,6 +27,7 @@ typedef struct {
 	char **filenames;
 	bool from_stdin;
 	bool to_stdout;
+	bool all_to_stdout;
 	bool recursive;
 	int filecnt;
 	int startnum;
