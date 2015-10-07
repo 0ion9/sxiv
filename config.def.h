@@ -136,7 +136,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_braceright,    g_change_gamma,       +1 },
 	{ ControlMask,  XK_G,             g_change_gamma,        0 },
 	{ 0          ,  XK_S,             g_cycle_silhouetting, None },
-	{ 0          ,  XK_T,             g_cycle_opacity,      None },
+	{ 0          ,  XK_T,             g_cycle_opacity,      0 },
 	{ 0          ,  XK_W,             i_cycle_tiling,       None },
 	{ 0          ,  XK_X,             i_cycle_scalefactor,  None },
 	{ ControlMask,  XK_t,             g_toggle_negalpha,    None },

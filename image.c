@@ -1314,6 +1314,7 @@ void img_update_colormodifiers(img_t *img, int gamma, int silhouetting, bool neg
 		return;
 	img->dirty = true;
 	// always begin by resetting.
+	imlib_context_set_color_modifier(img->cmod);
 	imlib_get_color_modifier_tables(r, g, b, a);
 	for (i=0;i < 256; i++) {
 			r[i] = i;
@@ -1369,7 +1370,7 @@ void img_update_colormodifiers_current(img_t *img) {
 }
 
 void img_update_colormodifiers_none(img_t *img) {
-	img_update_colormodifiers(img, 0, 0, false, 6);
+	imlib_context_set_color_modifier(NULL);
 }
 
 void img_cycle_silhouetting(img_t *img)
@@ -1420,19 +1421,25 @@ void img_cycle_tiling(img_t *img)
 
 extern tns_t tns;
 
-bool img_cycle_opacity(img_t *img)
+bool img_cycle_opacity(img_t *img, int d)
 {
 	int new_opacity;
 	if (img == NULL)
 		return false;
-	new_opacity = img->opacity + 1;
-	if (new_opacity > 6)
+	if (d != 0) {
+		new_opacity = img->opacity + d;
+		new_opacity = new_opacity % 6;
+	} else {
+		new_opacity = 6;
+	}
+	if (new_opacity == 0)
 		new_opacity = 1;
 	if (new_opacity != img->opacity){
+		warn("new_opacity=%d", new_opacity);
 		img->opacity = new_opacity;
+		img->dirty = true;
 		img_update_colormodifiers_current(img);
 	    img->tile.dirty_cache = 1;
-//		img_tiles_recache(img, 1);
 	    return true;
 	}
 	return false;

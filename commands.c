@@ -545,9 +545,27 @@ bool cg_cycle_silhouetting(arg_t _)
 	return true;
 }
 
-bool cg_cycle_opacity(arg_t _)
+bool cg_cycle_opacity(arg_t o)
 {
-	img_cycle_opacity(&img);
+	// 0 : cycle forward
+	// -1 : cycle backward
+	// 1-6 : set opacity to o
+	if (prefix != 0)
+		o = prefix;
+	if (o > 6)
+		return false;
+	if (o == -1) {
+		warn("o-1");
+		img_cycle_opacity(&img, -1);
+	} else {
+		warn("o>=0 : %d", o);
+		if (o == 0) {
+			img_cycle_opacity(&img, 1);
+		} else {
+			img.opacity=0;
+			img_cycle_opacity(&img, o);
+		}
+	}
 	if (mode == MODE_THUMB)
 		tns.dirty = true;
 	tns.need_alpha = (img.opacity !=6);
