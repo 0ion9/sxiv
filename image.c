@@ -1475,30 +1475,10 @@ bool img_change_gamma(img_t *img, int d)
 	}
 }
 
-static int _scale_factors[23][2] = {
+static int _scale_factors[3][2] = {
   {1, 1},
   {2, 1},
   {1, 2},
-  {3, 1},
-  {1, 3},
-  {3, 2},
-  {2, 3},
-  {4, 1},
-  {1, 4},
-  {4, 3},
-  {3, 4},
-  {5, 1},
-  {1, 5},
-  {5, 2},
-  {2, 5},
-  {5, 3},
-  {3, 5},
-  {5, 4},
-  {4, 5},
-  {6, 1},
-  {1, 6},
-  {6, 5},
-  {5, 6},
 };
 
 void img_cycle_scalefactors(img_t *img)
