@@ -200,6 +200,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_underscore,    i_fit_to_win,         SCALE_FIT },
 	{ ControlMask,  XK_minus,         i_fit_to_win,         SCALE_WIDTH },
 	{ ControlMask,  XK_underscore,    i_fit_to_win,         SCALE_HEIGHT },
+	{ 0,            XK_D,             i_fit_to_win,         SCALE_DISTORT },
 	{ 0,            XK_comma,         i_rotate,             DEGREE_270 },
 	{ 0,            XK_period,        i_rotate,             DEGREE_90 },
 	{ 0,            XK_greater,       i_rotate,             DEGREE_180 },

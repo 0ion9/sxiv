@@ -54,7 +54,8 @@ typedef enum {
 	SCALE_FIT,
 	SCALE_WIDTH,
 	SCALE_HEIGHT,
-	SCALE_ZOOM
+	SCALE_ZOOM,
+	SCALE_DISTORT,
 } scalemode_t;
 
 typedef enum {

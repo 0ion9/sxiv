@@ -51,6 +51,7 @@ typedef struct {
 
 	scalemode_t scalemode;
 	float zoom;
+	float yzoom; // always equals zoom except in distort mode, where fit is done on width and then yzoom is set to fill the window vertically.
 
 	bool checkpan;
 	bool dirty;

@@ -71,6 +71,7 @@ void img_init(img_t *img, win_t *win)
 	img->zoom = options->zoom;
 	img->zoom = MAX(img->zoom, zoom_min);
 	img->zoom = MIN(img->zoom, zoom_max);
+	img->yzoom = img->zoom;
 	img->checkpan = false;
 	img->dirty = false;
 	img->aa = ANTI_ALIAS;
@@ -412,7 +413,7 @@ void img_check_pan(img_t *img, bool moved)
 
 	win = img->win;
 	w = (img->w * img->zoom) * img->wmul;
-	h = (img->h * img->zoom) * img->hmul;
+	h = (img->h * img->yzoom) * img->hmul;
 	if (img->tile.mode > 0) {
 		// maybe should just set this to win->[wh]?
 		w *= 12;
@@ -513,6 +514,7 @@ bool img_fit(img_t *img)
 	}
 
 	switch (img->scalemode) {
+		case SCALE_DISTORT:
 		case SCALE_WIDTH:
 			z = zw;
 			break;
@@ -524,11 +526,19 @@ bool img_fit(img_t *img)
 			break;
 	}
 
-	z = MAX(z, zoom_min);
-	z = MIN(z, zmax);
+        if (img->scalemode != SCALE_DISTORT) {
+		z = MAX(z, zoom_min);
+		z = MIN(z, zmax);
+	} else {
+		z = MAX(0.0001, z);
+	}
 
+        // XXX won't correctly update for only-y changes
 	if (zoomdiff(z, img->zoom) != 0) {
 		img->zoom = z;
+		img->yzoom = z;
+		if (img->scalemode == SCALE_DISTORT)
+			img->yzoom = zh;
 		img_update_antialias(img);
 		img->dirty = true;
 		return true;
@@ -726,14 +736,14 @@ void img_draw_tiles(img_t *img)
 	ntiles = win->w / (img->w * img->zoom * img->wmul);
 	if ((ntiles * (img->w * img->zoom * img->wmul)) < win->w)
 		ntiles++;
-	dh = win->h / (img->h * img->zoom * img->hmul);
-	if ((dh * (img->h * img->zoom * img->hmul)) < win->h);
+	dh = win->h / (img->h * img->yzoom * img->hmul);
+	if ((dh * (img->h * img->yzoom * img->hmul)) < win->h);
 		dh++;
 	ntiles = ntiles * dh;
 	winw = win->w;
 	winh = win->h;
 	xzoom = img->zoom * img->wmul;
-	yzoom = img->zoom * img->hmul;
+	yzoom = img->yzoom * img->hmul;
 	stepx = img->w * xzoom;
 	stepy = img->h * yzoom;
 	tx = 0;
@@ -995,15 +1005,15 @@ void img_render(img_t *img)
 		dw = imgw * img->zoom;
 	}
 	if (img->y <= 0) {
-		sy = -(img->y / img->hmul) / img->zoom + 0.5;
-		sh = win->h / (img->zoom * img->hmul);
+		sy = -(img->y / img->hmul) / img->yzoom + 0.5;
+		sh = win->h / (img->yzoom * img->hmul);
 		dy = 0;
 		dh = win->h;
 	} else {
 		sy = 0;
 		sh = img->h;
 		dy = img->y;
-		dh = imgh * img->zoom;
+		dh = imgh * img->yzoom;
 	}
 
 	win_clear(win);
@@ -1085,7 +1095,7 @@ bool img_fit_win(img_t *img, scalemode_t sm)
 
 	if (img_fit(img)) {
 		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * img->zoom / oz;
-		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * img->zoom / oz;
+		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * img->yzoom / oz;
 		img->checkpan = true;
 		return true;
 	} else {
@@ -1105,8 +1115,9 @@ bool img_zoom(img_t *img, float z)
 
 	if (zoomdiff(z, img->zoom) != 0) {
 		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / (img->zoom * img->wmul);
-		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->zoom * img->hmul);
+		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->yzoom * img->hmul);
 		img->zoom = z;
+		img->yzoom = z;
 		img->checkpan = true;
 		img_update_antialias(img);
 		img->dirty = true;
