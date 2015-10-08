@@ -1439,7 +1439,7 @@ bool img_cycle_opacity(img_t *img, int d)
 		return false;
 	if (d != 0) {
 		new_opacity = img->opacity + d;
-		new_opacity = new_opacity % 6;
+		new_opacity = new_opacity % 7;
 	} else {
 		new_opacity = 6;
 	}
