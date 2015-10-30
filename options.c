@@ -16,9 +16,6 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _IMAGE_CONFIG
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,6 +23,8 @@
 
 #include "options.h"
 #include "util.h"
+
+#define _IMAGE_CONFIG
 #include "config.h"
 
 options_t _options;
@@ -47,6 +46,9 @@ void parse_options(int argc, char **argv)
 	int n, opt;
 	char *end, *s;
 	const char *scalemodes = "dfwh";
+
+	progname = strrchr(argv[0], '/');
+	progname = progname ? progname + 1 : argv[0];
 
 	_options.from_stdin = false;
 	_options.to_stdout = false;
@@ -89,10 +91,8 @@ void parse_options(int argc, char **argv)
 				break;
 			case 'G':
 				n = strtol(optarg, &end, 0);
-				if (*end != '\0') {
-					fprintf(stderr, "sxiv: invalid argument for option -G: %s\n", optarg);
-					exit(EXIT_FAILURE);
-				}
+				if (*end != '\0')
+					error(EXIT_FAILURE, 0, "Invalid argument for option -G: %s", optarg);
 				_options.gamma = n;
 				break;
 			case 'g':
@@ -112,10 +112,8 @@ void parse_options(int argc, char **argv)
 				break;
 			case 'n':
 				n = strtol(optarg, &end, 0);
-				if (*end != '\0' || n <= 0) {
-					fprintf(stderr, "sxiv: invalid argument for option -n: %s\n", optarg);
-					exit(EXIT_FAILURE);
-				}
+				if (*end != '\0' || n <= 0)
+					error(EXIT_FAILURE, 0, "Invalid argument for option -n: %s", optarg);
 				_options.startnum = n - 1;
 				break;
 			case 'N':
@@ -137,18 +135,14 @@ void parse_options(int argc, char **argv)
 				break;
 			case 'S':
 				n = strtol(optarg, &end, 0);
-				if (*end != '\0' || n <= 0) {
-					fprintf(stderr, "sxiv: invalid argument for option -S: %s\n", optarg);
-					exit(EXIT_FAILURE);
-				}
+				if (*end != '\0' || n <= 0)
+					error(EXIT_FAILURE, 0, "Invalid argument for option -S: %s", optarg);
 				_options.slideshow = n;
 				break;
 			case 's':
 				s = strchr(scalemodes, optarg[0]);
-				if (s == NULL || *s == '\0' || strlen(optarg) != 1) {
-					fprintf(stderr, "sxiv: invalid argument for option -s: %s\n", optarg);
-					exit(EXIT_FAILURE);
-				}
+				if (s == NULL || *s == '\0' || strlen(optarg) != 1)
+					error(EXIT_FAILURE, 0, "Invalid argument for option -s: %s", optarg);
 				_options.scalemode = s - scalemodes;
 				break;
 			case 't':
@@ -163,10 +157,8 @@ void parse_options(int argc, char **argv)
 				break;
 			case 'z':
 				n = strtol(optarg, &end, 0);
-				if (*end != '\0' || n <= 0) {
-					fprintf(stderr, "sxiv: invalid argument for option -z: %s\n", optarg);
-					exit(EXIT_FAILURE);
-				}
+				if (*end != '\0' || n <= 0)
+					error(EXIT_FAILURE, 0, "Invalid argument for option -z: %s", optarg);
 				_options.scalemode = SCALE_ZOOM;
 				_options.zoom = (float) n / 100.0;
 				break;

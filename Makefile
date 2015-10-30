@@ -1,11 +1,11 @@
-VERSION   := git-20150819
+VERSION   := git-20151028
 
 PREFIX    := /usr/local
 MANPREFIX := $(PREFIX)/share/man
 
 CC        ?= gcc
 CFLAGS    += -std=c99 -Wall -pedantic
-CPPFLAGS  += -I$(PREFIX)/include -D_XOPEN_SOURCE=500
+CPPFLAGS  += -I$(PREFIX)/include -D_XOPEN_SOURCE=700
 LDFLAGS   += -L$(PREFIX)/lib
 LIBS      := -lX11 -lImlib2
 

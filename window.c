@@ -16,9 +16,6 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _WINDOW_CONFIG
-
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
@@ -28,8 +25,10 @@
 #include "options.h"
 #include "util.h"
 #include "window.h"
-#include "config.h"
 #include "icon/data.h"
+
+#define _WINDOW_CONFIG
+#include "config.h"
 
 enum {
 	H_TEXT_PAD = 5,
@@ -81,7 +80,7 @@ void win_init_font(Display *dpy, const char *fontstr)
 		if ((font.xfont = XLoadQueryFont(dpy, fontstr)) == NULL &&
 		    (font.xfont = XLoadQueryFont(dpy, "fixed")) == NULL)
 		{
-			die("could not load font: %s", fontstr);
+			error(EXIT_FAILURE, 0, "Error loading font '%s'", fontstr);
 		}
 		font.ascent  = font.xfont->ascent;
 		font.descent = font.xfont->descent;
@@ -94,13 +93,11 @@ unsigned long win_alloc_color(win_t *win, const char *name)
 {
 	XColor col;
 
-	if (win == NULL)
-		return 0UL;
 	if (XAllocNamedColor(win->env.dpy,
 	                     DefaultColormap(win->env.dpy, win->env.scr),
 	                     name, &col, &col) == 0)
 	{
-		die("could not allocate color: %s", name);
+		error(EXIT_FAILURE, 0, "Error allocating color '%s'", name);
 	}
 	return col.pixel;
 }
@@ -142,14 +139,11 @@ void win_init(win_t *win)
 {
 	win_env_t *e;
 
-	if (win == NULL)
-		return;
-
 	memset(win, 0, sizeof(win_t));
 
 	e = &win->env;
 	if ((e->dpy = XOpenDisplay(NULL)) == NULL)
-		die("could not open display");
+		error(EXIT_FAILURE, 0, "Error opening X display");
 
 	e->scr = DefaultScreen(e->dpy);
 	e->scrw = DisplayWidth(e->dpy, e->scr);
@@ -159,7 +153,7 @@ void win_init(win_t *win)
 	e->depth = DefaultDepth(e->dpy, e->scr);
 
 	if (setlocale(LC_CTYPE, "") == NULL || XSupportsLocale() == 0)
-		warn("no locale support");
+		error(0, 0, "No locale support");
 
 	win_init_font(e->dpy, BAR_FONT);
 
@@ -171,8 +165,8 @@ void win_init(win_t *win)
 
 	win->bar.l.size = BAR_L_LEN;
 	win->bar.r.size = BAR_R_LEN;
-	win->bar.l.buf = s_malloc(win->bar.l.size);
-	win->bar.r.buf = s_malloc(win->bar.r.size);
+	win->bar.l.buf = emalloc(win->bar.l.size);
+	win->bar.r.buf = emalloc(win->bar.r.size);
 	win->bar.h = options->hide_bar ? 0 : barheight;
 
 	INIT_ATOM_(WM_DELETE_WINDOW);
@@ -198,9 +192,6 @@ void win_open(win_t *win)
 	int gmask;
 	XSizeHints sizehints;
 	Bool fullscreen = options->fullscreen && fs_support;
-
-	if (win == NULL)
-		return;
 
 	e = &win->env;
 
@@ -245,7 +236,7 @@ void win_open(win_t *win)
 	                          win->x, win->y, win->w, win->h, 0,
 	                          e->depth, InputOutput, e->vis, 0, NULL);
 	if (win->xwin == None)
-		die("could not create window");
+		error(EXIT_FAILURE, 0, "Error creating X window");
 	
 	XSelectInput(e->dpy, win->xwin,
 	             ButtonReleaseMask | ButtonPressMask | KeyPressMask |
@@ -258,7 +249,7 @@ void win_open(win_t *win)
 	if (XAllocNamedColor(e->dpy, DefaultColormap(e->dpy, e->scr), "black",
 	                     &col, &col) == 0)
 	{
-		die("could not allocate color: black");
+		error(EXIT_FAILURE, 0, "Error allocating color 'black'");
 	}
 	none = XCreateBitmapFromData(e->dpy, win->xwin, none_data, 8, 8);
 	cnone = XCreatePixmapCursor(e->dpy, none, none, &col, &col, 0, 0);
@@ -266,7 +257,7 @@ void win_open(win_t *win)
 	gc = XCreateGC(e->dpy, win->xwin, 0, None);
 
 	n = icons[ARRLEN(icons)-1].size;
-	icon_data = s_malloc((n * n + 2) * sizeof(*icon_data));
+	icon_data = emalloc((n * n + 2) * sizeof(*icon_data));
 
 	for (i = 0; i < ARRLEN(icons); i++) {
 		n = 0;
@@ -315,11 +306,8 @@ void win_open(win_t *win)
 		win_toggle_fullscreen(win);
 }
 
-void win_close(win_t *win)
+CLEANUP void win_close(win_t *win)
 {
-	if (win == NULL || win->xwin == None)
-		return;
-
 	XFreeCursor(win->env.dpy, carrow);
 	XFreeCursor(win->env.dpy, cnone);
 	XFreeCursor(win->env.dpy, chand);
@@ -334,9 +322,6 @@ void win_close(win_t *win)
 bool win_configure(win_t *win, XConfigureEvent *c)
 {
 	bool changed;
-
-	if (win == NULL || c == NULL)
-		return false;
 
 	changed = win->w != c->width || win->h + win->bar.h != c->height;
 
@@ -354,12 +339,9 @@ void win_toggle_fullscreen(win_t *win)
 	XEvent ev;
 	XClientMessageEvent *cm;
 
-	if (win == NULL || win->xwin == None)
-		return;
-
 	if (!fs_support) {
 		if (!fs_warned) {
-			warn("window manager does not support fullscreen");
+			error(0, 0, "No fullscreen support");
 			fs_warned = True;
 		}
 		return;
@@ -383,9 +365,6 @@ void win_toggle_fullscreen(win_t *win)
 
 void win_toggle_bar(win_t *win)
 {
-	if (win == NULL || win->xwin == None)
-		return;
-
 	if (win->bar.h != 0) {
 		win->h += win->bar.h;
 		win->bar.h = 0;
@@ -398,9 +377,6 @@ void win_toggle_bar(win_t *win)
 void win_clear(win_t *win)
 {
 	win_env_t *e;
-
-	if (win == NULL || win->xwin == None)
-		return;
 
 	e = &win->env;
 
@@ -423,8 +399,6 @@ void win_draw_bar(win_t *win)
 	win_env_t *e;
 	win_bar_t *l, *r;
 
-	if (win == NULL || win->xwin == None)
-		return;
 	if ((l = &win->bar.l)->buf == NULL || (r = &win->bar.r)->buf == NULL)
 		return;
 
@@ -473,9 +447,6 @@ void win_draw_bar(win_t *win)
 
 void win_draw(win_t *win)
 {
-	if (win == NULL || win->xwin == None)
-		return;
-
 	if (win->bar.h > 0)
 		win_draw_bar(win);
 
@@ -488,9 +459,6 @@ void win_draw_rect(win_t *win, int x, int y, int w, int h, bool fill, int lw,
                    unsigned long col)
 {
 	XGCValues gcval;
-
-	if (win == NULL || win->buf.pm == None)
-		return;
 
 	gcval.line_width = lw;
 	gcval.foreground = col;
@@ -517,9 +485,6 @@ int win_textwidth(const char *text, unsigned int len, bool with_padding)
 
 void win_set_title(win_t *win, const char *title)
 {
-	if (win == NULL || win->xwin == None)
-		return;
-
 	if (title == NULL)
 		title = "sxiv";
 
@@ -536,9 +501,6 @@ void win_set_title(win_t *win, const char *title)
 
 void win_set_cursor(win_t *win, cursor_t cursor)
 {
-	if (win == NULL || win->xwin == None)
-		return;
-
 	switch (cursor) {
 		case CURSOR_NONE:
 			XDefineCursor(win->env.dpy, win->xwin, cnone);

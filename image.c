@@ -16,9 +16,7 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _IMAGE_CONFIG
-
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -27,6 +25,8 @@
 #include "image.h"
 #include "options.h"
 #include "util.h"
+
+#define _IMAGE_CONFIG
 #include "config.h"
 #include "thumbs.h"
 
@@ -55,9 +55,6 @@ void img_init(img_t *img, win_t *win)
 	int i;
 	zoom_min = zoom_levels[0] / 100.0;
 	zoom_max = zoom_levels[ARRLEN(zoom_levels) - 1] / 100.0;
-
-	if (img == NULL || win == NULL)
-		return;
 
 	imlib_context_set_display(win->env.dpy);
 	imlib_context_set_visual(win->env.vis);
@@ -159,7 +156,7 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 	if (img->multi.cap == 0) {
 		img->multi.cap = 8;
 		img->multi.frames = (img_frame_t*)
-		                    s_malloc(sizeof(img_frame_t) * img->multi.cap);
+		                    emalloc(sizeof(img_frame_t) * img->multi.cap);
 	}
 	img->multi.cnt = img->multi.sel = 0;
 	img->multi.length = 0;
@@ -170,7 +167,7 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 	gif = DGifOpenFileName(file->path);
 #endif
 	if (gif == NULL) {
-		warn("could not open gif file: %s", file->name);
+		error(0, 0, "%s: Error opening gif image", file->name);
 		return false;
 	}
 	bg = gif->SBackGroundColor;
@@ -211,9 +208,9 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 			w = gif->Image.Width;
 			h = gif->Image.Height;
 
-			rows = (GifRowType*) s_malloc(h * sizeof(GifRowType));
+			rows = (GifRowType*) emalloc(h * sizeof(GifRowType));
 			for (i = 0; i < h; i++)
-				rows[i] = (GifRowType) s_malloc(w * sizeof(GifPixelType));
+				rows[i] = (GifRowType) emalloc(w * sizeof(GifPixelType));
 			if (gif->Image.Interlace) {
 				for (i = 0; i < 4; i++) {
 					for (j = intoffset[i]; j < h; j += intjump[i])
@@ -224,7 +221,7 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 					DGifGetLine(gif, rows[i], w);
 			}
 
-			ptr = data = (DATA32*) s_malloc(sizeof(DATA32) * sw * sh);
+			ptr = data = (DATA32*) emalloc(sizeof(DATA32) * sw * sh);
 			cmap = gif->Image.ColorMap ? gif->Image.ColorMap : gif->SColorMap;
 			r = cmap->Colors[bg].Red;
 			g = cmap->Colors[bg].Green;
@@ -278,8 +275,8 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 			if (img->multi.cnt == img->multi.cap) {
 				img->multi.cap *= 2;
 				img->multi.frames = (img_frame_t*)
-				                    s_realloc(img->multi.frames,
-				                              img->multi.cap * sizeof(img_frame_t));
+				                    erealloc(img->multi.frames,
+				                             img->multi.cap * sizeof(img_frame_t));
 			}
 			img->multi.frames[img->multi.cnt].im = im;
 			img->multi.frames[img->multi.cnt].delay = delay > 0 ? delay : DEF_GIF_DELAY;
@@ -295,7 +292,7 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 #endif
 
 	if (err && (file->flags & FF_WARN))
-		warn("corrupted gif file: %s", file->name);
+		error(0, 0, "%s: Corrupted gif file", file->name);
 
 	if (img->multi.cnt > 1) {
 		imlib_context_set_image(img->im);
@@ -319,14 +316,11 @@ bool img_load(img_t *img, const fileinfo_t *file)
 {
 	const char *fmt;
 
-	if (img == NULL || file == NULL || file->name == NULL || file->path == NULL)
-		return false;
-
 	if (access(file->path, R_OK) < 0 ||
 	    (img->im = imlib_load_image(file->path)) == NULL)
 	{
 		if (file->flags & FF_WARN)
-			warn("could not open image: %s", file->name);
+			error(0, 0, "%s: Error opening image", file->name);
 		return false;
 	}
 
@@ -357,12 +351,9 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	return true;
 }
 
-void img_close(img_t *img, bool decache)
+CLEANUP void img_close(img_t *img, bool decache)
 {
 	int i;
-
-	if (img == NULL)
-		return;
 
 	if (img->multi.cnt > 0) {
 		for (i = 0; i < img->multi.cnt; i++) {
@@ -443,18 +434,18 @@ void img_check_pan(img_t *img, bool moved)
 			stepy *= 12;
 		}
 		if (img->x < 0){
-			warn("Cneg x %f", img->x);
+			//warn("Cneg x %f", img->x);
 			while (img->x < (-stepx))
 				img->x += stepx;
-			warn("-> %f", img->x);
+			//warn("-> %f", img->x);
 		} else {
-			warn("Cpos x %f", img->x);
+			//warn("Cpos x %f", img->x);
 			while (img->x > stepx)
 				img->x -= stepx;
 		}
 
 		if (img->y < 0) {
-			warn("Cneg y %f", img->y);
+			//warn("Cneg y %f", img->y);
 			while (img->y < (-stepy))
 				img->y += stepy;
 		} else {
@@ -465,7 +456,7 @@ void img_check_pan(img_t *img, bool moved)
 
 	if (!moved && (ox != img->x || oy != img->y))
 		img->dirty = true;
-	warn("check_pan final x,y = %f, %f", img->x, img->y);
+	//warn("check_pan final x,y = %f, %f", img->x, img->y);
 }
 
 void img_update_antialias(img_t *img)
@@ -499,8 +490,6 @@ bool img_fit(img_t *img)
 {
 	float z, zmax, zw, zh;
 
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return false;
 	if (img->scalemode == SCALE_ZOOM)
 		return false;
 
@@ -610,7 +599,7 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 	char buf[13];
     switch (layout_index) {
 		case 0:
-			warn("SETTING NOFLIPS LAYOUT");
+			//warn("SETTING NOFLIPS LAYOUT");
 			for (y = 0; y < 12; y++) {
 				for (x = 0; x < 12; x++) {
 					img->tile.layout[y][x] = 0;
@@ -618,17 +607,17 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 			}
 			break;
 		case 1:
-			warn("SETTING ALLADJ LAYOUT");
+			//warn("SETTING ALLADJ LAYOUT");
 			for (y = 0; y < 12; y++) {
 				for (x = 0; x < 12; x++) {
 					v = _all_adj_layout[y % 6][x % 6];
-					warn("v = %d", v);
+					//warn("v = %d", v);
 					img->tile.layout[y][x] = v;
 				}
 			}
 			break;
 		case 2:
-			warn("SETTING RANDOM LAYOUT");
+			//warn("SETTING RANDOM LAYOUT");
 			for (y = 0; y < 12; y++) {
 				for (x = 0; x < 12; x++) {
 					v = random() & 0x3;
@@ -638,7 +627,7 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 			break;
 		case 3:
 			// 4 flips + rot90 + rot270
-			warn("SETTING RANDOM(+rotate) LAYOUT");
+			//warn("SETTING RANDOM(+rotate) LAYOUT");
 			for (y = 0; y < 12; y++) {
 				for (x = 0; x < 12; x++) {
 					v = random() & 0x5;
@@ -653,7 +642,7 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 			buf[x] = 48 + img->tile.layout[y][x];
 		}
 		buf[12] = 0;
-		warn(buf);
+		//warn(buf);
 	}
 }
 
@@ -752,14 +741,14 @@ void img_draw_tiles(img_t *img)
 	y = img->y;
 	// setup offset into tile pattern
 	if (x < 0){
-		warn("neg x %f", x);
+		//warn("neg x %f", x);
 		while (x < (-img->w * xzoom)) {
 			tx--;
 		    x += (img->w * xzoom);
 		}
-		warn("-> %f", x);
+		//warn("-> %f", x);
 	} else {
-		warn("pos x %f", x);
+		//warn("pos x %f", x);
 		while (x > (img->w * xzoom)) {
 		    x -= (img->w * xzoom);
 		    tx++;
@@ -767,7 +756,7 @@ void img_draw_tiles(img_t *img)
 	}
 
 	if (y < 0) {
-		warn("neg y %f", y);
+		//warn("neg y %f", y);
 		while (y < (-img->h * yzoom)) {
 		    y += (img->h * yzoom);
 		    ty--;
@@ -799,8 +788,8 @@ void img_draw_tiles(img_t *img)
 	img_update_colormodifiers_none(img);
 	// XXX use ntiles to decide how large of an area to fill.
 	// actually, that should be part of zoom setup?
-	warn("simpletiling, img->x = %f, img->y = %f", img->x, img->y);
-	warn("initx = %f, inity = %f", initx, inity);
+	//warn("simpletiling, img->x = %f, img->y = %f", img->x, img->y);
+	//warn("initx = %f, inity = %f", initx, inity);
 	for (y = inity; y < winh; y += stepy) {
 		for (x = initx; x < winw; x += stepx) {
 			// maybe needs clipping?
@@ -813,7 +802,7 @@ void img_draw_tiles(img_t *img)
 				dx = 0;
 /*				warn("@ %f, x == %f -> sx, dx = %d, %d; sw, dw = %d, %d", img->zoom, x, \
 					 sx, dx, sw, dw); */
-				warn("tx %d, ty %d", tx, ty);
+				//warn("tx %d, ty %d", tx, ty);
 			} else {
 				sw = img->w;
 				sx = 0;
@@ -887,7 +876,7 @@ void img_tiles_recache(img_t *img, bool blend)
 		imlib_context_set_image(img->im);
 		// create enough checkerboard/whatever to composite onto...
 		if ((bg = imlib_create_image(img->w, img->h)) == NULL)
-			die("could not allocate memory");
+			error(EXIT_FAILURE, ENOMEM, NULL);
 		imlib_context_set_image(bg);
 		imlib_image_set_has_alpha(0);
 
@@ -895,7 +884,7 @@ void img_tiles_recache(img_t *img, bool blend)
 			int i, c, r;
 			DATA32 col[2] = { 0xFF666666, 0xFF999999 };
 			DATA32 * data = imlib_image_get_data();
-			warn("CHECKS ALPHA");
+			//warn("CHECKS ALPHA");
 			// working note: I think this generates a checkerboard pattern.
 			for (r = 0; r < img->h; r++) {
 				i = r * img->w;
@@ -909,7 +898,7 @@ void img_tiles_recache(img_t *img, bool blend)
 			imlib_image_put_back_data(data);
 		} else {
 			int c;
-			warn("FLAT ALPHA");
+			//warn("FLAT ALPHA");
 			c = img->win->fullscreen ? img->win->fscol : img->win->bgcol;
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, img->w, img->h);
@@ -968,9 +957,6 @@ void img_render(img_t *img)
 	bool need_trans;
 	int tiling;
 	int imgw, imgh;
-
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return;
 
 	win = img->win;
 	img_fit(img);
@@ -1035,7 +1021,7 @@ void img_render(img_t *img)
 	if (need_trans && tiling == 0) {
 		// create enough checkerboard/whatever to composite onto...
 		if ((bg = imlib_create_image(dw, dh)) == NULL)
-			die("could not allocate memory");
+			error(EXIT_FAILURE, ENOMEM, NULL);
 		imlib_context_set_image(bg);
 		imlib_image_set_has_alpha(0);
 
@@ -1043,7 +1029,7 @@ void img_render(img_t *img)
 			int i, c, r;
 			DATA32 col[2] = { 0xFF666666, 0xFF999999 };
 			DATA32 * data = imlib_image_get_data();
-			warn("CHECKS ALPHA");
+			//warn("CHECKS ALPHA");
 			for (r = 0; r < dh; r++) {
 				i = r * dw;
 				if (r == 0 || r == 8) {
@@ -1055,7 +1041,7 @@ void img_render(img_t *img)
 			}
 			imlib_image_put_back_data(data);
 		} else {
-			warn("FLAT ALPHA");
+			//warn("FLAT ALPHA");
 			c = win->fullscreen ? win->fscol : win->bgcol;
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, dw, dh);
@@ -1072,7 +1058,7 @@ void img_render(img_t *img)
 		if (tiling == 0){
 			imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
 		} else {
-			warn("tiling");
+			//warn("tiling");
 			// cmods are handled inside these:
 			if (img->tile.dirty_cache)
 				img_tiles_recache(img, 1);
@@ -1086,9 +1072,6 @@ void img_render(img_t *img)
 bool img_fit_win(img_t *img, scalemode_t sm)
 {
 	float oz;
-
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return false;
 
 	oz = img->zoom;
 	img->scalemode = sm;
@@ -1105,9 +1088,6 @@ bool img_fit_win(img_t *img, scalemode_t sm)
 
 bool img_zoom(img_t *img, float z)
 {
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return false;
-
 	z = MAX(z, zoom_min);
 	z = MIN(z, zoom_max);
 
@@ -1132,9 +1112,6 @@ bool img_zoom_in(img_t *img)
 	int i;
 	float z;
 
-	if (img == NULL || img->im == NULL)
-		return false;
-
 	for (i = 1; i < ARRLEN(zoom_levels); i++) {
 		z = zoom_levels[i] / 100.0;
 		if (zoomdiff(z, img->zoom) > 0)
@@ -1148,9 +1125,6 @@ bool img_zoom_out(img_t *img)
 	int i;
 	float z;
 
-	if (img == NULL || img->im == NULL)
-		return false;
-
 	for (i = ARRLEN(zoom_levels) - 2; i >= 0; i--) {
 		z = zoom_levels[i] / 100.0;
 		if (zoomdiff(z, img->zoom) < 0)
@@ -1162,9 +1136,6 @@ bool img_zoom_out(img_t *img)
 bool img_move(img_t *img, float dx, float dy)
 {
 	float ox, oy;
-
-	if (img == NULL || img->im == NULL)
-		return false;
 
 	ox = img->x;
 	oy = img->y;
@@ -1190,9 +1161,6 @@ bool img_pan(img_t *img, direction_t dir, int d)
 	 */
 	float x, y;
 
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return false;
-
 	if (d > 0) {
 		x = y = MAX(1, (float) d * img->zoom);
 	} else {
@@ -1216,9 +1184,6 @@ bool img_pan(img_t *img, direction_t dir, int d)
 bool img_pan_edge(img_t *img, direction_t dir)
 {
 	int ox, oy;
-
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return false;
 
 	ox = img->x;
 	oy = img->y;
@@ -1245,9 +1210,6 @@ bool img_pan_edge(img_t *img, direction_t dir)
 void img_rotate(img_t *img, degree_t d)
 {
 	int i, ox, oy, tmp;
-
-	if (img == NULL || img->im == NULL || img->win == NULL)
-		return;
 
 	imlib_context_set_image(img->im);
 	imlib_image_orientate(d);
@@ -1284,7 +1246,7 @@ void img_flip(img_t *img, flipdir_t d)
 
 	d = (d & (FLIP_HORIZONTAL | FLIP_VERTICAL)) - 1;
 
-	if (img == NULL || img->im == NULL || d < 0 || d >= ARRLEN(imlib_flip_op))
+	if (d < 0 || d >= ARRLEN(imlib_flip_op))
 		return;
 
 	imlib_context_set_image(img->im);
@@ -1446,7 +1408,7 @@ bool img_cycle_opacity(img_t *img, int d)
 	if (new_opacity == 0)
 		new_opacity = 1;
 	if (new_opacity != img->opacity){
-		warn("new_opacity=%d", new_opacity);
+		//warn("new_opacity=%d", new_opacity);
 		img->opacity = new_opacity;
 		img->dirty = true;
 		img_update_colormodifiers_current(img);
@@ -1465,9 +1427,6 @@ bool img_change_gamma(img_t *img, int d)
 	 * d > 0: increase gamma
 	 */
 	int gamma;
-
-	if (img == NULL)
-		return false;
 
 	if (d == 0)
 		gamma = 0;
@@ -1507,10 +1466,10 @@ void img_cycle_scalefactors(img_t *img)
 		i = 0;
 	else
 		i++;
-	warn("Scale factor index = %d", i - 1);
+	//warn("Scale factor index = %d", i - 1);
 	if (i >= ARRLEN(_scale_factors))
 		i = 0;
-	warn("New scale factor index = %d", i);
+	//warn("New scale factor index = %d", i);
 	img->wmul = _scale_factors[i][0];
 	img->hmul = _scale_factors[i][1];
 	img->checkpan = true;
@@ -1519,8 +1478,6 @@ void img_cycle_scalefactors(img_t *img)
 
 bool img_frame_goto(img_t *img, int n)
 {
-	if (img == NULL || img->im == NULL)
-		return false;
 	if (n < 0 || n >= img->multi.cnt || n == img->multi.sel)
 		return false;
 
@@ -1538,7 +1495,7 @@ bool img_frame_goto(img_t *img, int n)
 
 bool img_frame_navigate(img_t *img, int d)
 {
-	if (img == NULL|| img->im == NULL || img->multi.cnt == 0 || d == 0)
+	if (img->multi.cnt == 0 || d == 0)
 		return false;
 
 	d += img->multi.sel;
@@ -1552,7 +1509,7 @@ bool img_frame_navigate(img_t *img, int d)
 
 bool img_frame_animate(img_t *img)
 {
-	if (img == NULL || img->im == NULL || img->multi.cnt == 0)
+	if (img->multi.cnt == 0)
 		return false;
 
 	if (img->multi.sel + 1 >= img->multi.cnt)

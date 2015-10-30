@@ -16,9 +16,6 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _IMAGE_CONFIG
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -29,6 +26,8 @@
 #include "options.h"
 #include "thumbs.h"
 #include "util.h"
+
+#define _IMAGE_CONFIG
 #include "config.h"
 
 void cleanup(void);
@@ -73,7 +72,6 @@ bool cg_quit(arg_t _)
 		for (i = 0; i < filecnt; i++)
 			printf("%s\n", files[i].name);
 	}
-	cleanup();
 	exit(EXIT_SUCCESS);
 }
 
@@ -500,7 +498,7 @@ bool ci_cycle_scalefactor(arg_t s)
 {
 	if (prefix != 0)
 		s = prefix;
-	warn("cycle_sf arg = %d", s);
+	//warn("cycle_sf arg = %d", s);
 	if (s > 99)
 		return false;
 	if ((s != 0) && ((s % 10) == 0))
@@ -528,7 +526,7 @@ bool ci_cycle_scalefactor(arg_t s)
 					}
 				}
 			}
-			warn("final w/hmul = %dx%d", img.wmul, img.hmul);
+			//warn("final w/hmul = %dx%d", img.wmul, img.hmul);
 		}
 		img.dirty = true;
 		img.checkpan = true;
@@ -555,10 +553,10 @@ bool cg_cycle_opacity(arg_t o)
 	if (o > 6)
 		return false;
 	if (o == -1) {
-		warn("o-1");
+		//warn("o-1");
 		img_cycle_opacity(&img, -1);
 	} else {
-		warn("o>=0 : %d", o);
+		//warn("o>=0 : %d", o);
 		if (o == 0) {
 			img_cycle_opacity(&img, 1);
 		} else {

@@ -61,22 +61,19 @@ typedef struct {
 	int stlen;
 } r_dir_t;
 
-void* s_malloc(size_t);
-void* s_realloc(void*, size_t);
-char* s_strdup(const char*);
+extern const char *progname;
 
-void warn(const char*, ...);
-void die(const char*, ...);
+void* emalloc(size_t);
+void* erealloc(void*, size_t);
+char* estrdup(const char*);
 
-ssize_t get_line(char**, size_t*, FILE*);
+void error(int, int, const char*, ...);
 
 void size_readable(float*, const char**);
-
-char* absolute_path(const char*);
 
 int r_opendir(r_dir_t*, const char*);
 int r_closedir(r_dir_t*);
 char* r_readdir(r_dir_t*);
-int r_mkdir(const char *);
+int r_mkdir(char*);
 
 #endif /* UTIL_H */

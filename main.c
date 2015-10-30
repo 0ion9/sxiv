@@ -16,9 +16,6 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _POSIX_C_SOURCE 200112L
-#define _MAPPINGS_CONFIG
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -46,17 +43,9 @@
 #include "thumbs.h"
 #include "util.h"
 #include "window.h"
+
+#define _MAPPINGS_CONFIG
 #include "config.h"
-
-enum {
-	FILENAME_CNT = 1024,
-	TITLE_LEN    = 256
-};
-
-typedef struct {
-	const char *name;
-	char *cmd;
-} exec_t;
 
 typedef struct {
 	struct timeval when;
@@ -87,15 +76,20 @@ bool inputting_prefix;
 
 bool resized = false;
 
+typedef struct {
+	int err;
+	char *cmd;
+} extcmd_t;
+
 struct {
-  char *cmd;
+  extcmd_t f;
   int fd;
   unsigned int i, lastsep;
   bool open;
 } info;
 
 struct {
-	char *cmd;
+	extcmd_t f;
 	bool warned;
 } keyhandler;
 
@@ -109,56 +103,35 @@ timeout_t timeouts[] = {
 
 void cleanup(void)
 {
-	static bool in = false;
-
-	if (!in) {
-		in = true;
-		img_close(&img, false);
-		tns_free(&tns);
-		win_close(&win);
-	}
+	img_close(&img, false);
+	tns_free(&tns);
+	win_close(&win);
 }
 
 void check_add_file(char *filename, bool given)
 {
+	char *path;
 	const char *bn;
 
-	if (filename == NULL || *filename == '\0')
+	if (*filename == '\0')
 		return;
 
-	if (access(filename, R_OK) < 0) {
+	if (access(filename, R_OK) < 0 ||
+	    (path = realpath(filename, NULL)) == NULL)
+	{
 		if (given)
-			warn("could not open file: %s", filename);
+			error(0, errno, "%s", filename);
 		return;
 	}
 
 	if (fileidx == filecnt) {
 		filecnt *= 2;
-		files = s_realloc(files, filecnt * sizeof(*files));
+		files = erealloc(files, filecnt * sizeof(*files));
 		memset(&files[filecnt/2], 0, filecnt/2 * sizeof(*files));
 	}
 
-#if defined _BSD_SOURCE || defined _XOPEN_SOURCE && \
-    ((_XOPEN_SOURCE - 0) >= 500 || defined _XOPEN_SOURCE_EXTENDED)
-
-	if ((files[fileidx].path = realpath(filename, NULL)) == NULL) {
-		warn("could not get real path of file: %s\n", filename);
-		return;
-	}
-#else
-	if (*filename != '/') {
-		if ((files[fileidx].path = absolute_path(filename)) == NULL) {
-			warn("could not get absolute path of file: %s\n", filename);
-			return;
-		}
-	} else {
-		files[fileidx].path = NULL;
-	}
-#endif
-
-	files[fileidx].name = s_strdup(filename);
-	if (files[fileidx].path == NULL)
-		files[fileidx].path = files[fileidx].name;
+	files[fileidx].name = estrdup(filename);
+	files[fileidx].path = path;
 	if ((bn = strrchr(files[fileidx].name , '/')) != NULL && bn[1] != '\0')
 		files[fileidx].base = ++bn;
 	else
@@ -187,8 +160,8 @@ void shift_marked_files(int direction)
         // meaning that for a filelist of 1000 items, 32000+24000 == 46000 bytes are allocated and freed each time
         // that shift_marked_files() is called.
 	warn("sizes: f %d t %d", sizeof(fileinfo_t), sizeof(thumb_t));
-	infobuf = (fileinfo_t *) s_malloc(sizeof(fileinfo_t) * filecnt);
-	thumbbuf = (thumb_t *) s_malloc(sizeof(thumb_t) * filecnt);
+	infobuf = (fileinfo_t *) emalloc(sizeof(fileinfo_t) * filecnt);
+	thumbbuf = (thumb_t *) emalloc(sizeof(thumb_t) * filecnt);
 	// super inefficient. We should keep around the buffers instead.
 
 
@@ -311,7 +284,6 @@ void remove_file(int n, bool manual)
 	if (filecnt == 1) {
 		if (!manual)
 			fprintf(stderr, "sxiv: no more files to display, aborting\n");
-		cleanup();
 		exit(manual ? EXIT_SUCCESS : EXIT_FAILURE);
 	}
 	if (files[n].flags & FF_MARK)
@@ -374,9 +346,9 @@ void clone_file(int n)
 		newpath = strdup(files[n].path);
 	newbase = strdup(files[n].base);
 	fprintf(stderr, "sxiv: newp,n,b = %016" PRIxPTR " %016" PRIxPTR "%016" PRIxPTR "\n", (uintptr_t) newpath, (uintptr_t) newname, (uintptr_t) newbase);
-	newinfo = (fileinfo_t *) s_malloc(sizeof(*oldinfo) * (filecnt + 1));
+	newinfo = (fileinfo_t *) emalloc(sizeof(*oldinfo) * (filecnt + 1));
 	if (oldthumb != NULL)
-		newthumb = (thumb_t *) s_malloc(sizeof(*oldthumb) * (filecnt + 1));
+		newthumb = (thumb_t *) emalloc(sizeof(*oldthumb) * (filecnt + 1));
 	// reallocate memory (files, tns)
 	// copy the segment at start as-is
 	fprintf(stderr, "sxiv: thumbsize = %d; allthumbs= %d\n", sizeof(*oldthumb), sizeof(*oldthumb) * (filecnt + 1));
@@ -477,7 +449,7 @@ void open_info(void)
 	static pid_t pid;
 	int pfd[2];
 
-	if (info.cmd == NULL || info.open || win.bar.h == 0)
+	if (info.f.err != 0 || info.open || win.bar.h == 0)
 		return;
 	if (info.fd != -1) {
 		close(info.fd);
@@ -491,9 +463,8 @@ void open_info(void)
 	if ((pid = fork()) == 0) {
 		close(pfd[0]);
 		dup2(pfd[1], 1);
-		execl(info.cmd, info.cmd, files[fileidx].name, NULL);
-		warn("could not exec: %s", info.cmd);
-		exit(EXIT_FAILURE);
+		execl(info.f.cmd, info.f.cmd, files[fileidx].name, NULL);
+		error(EXIT_FAILURE, errno, "exec: %s", info.f.cmd);
 	}
 	close(pfd[1]);
 	if (pid < 0) {
@@ -547,7 +518,8 @@ void load_image(int new)
 	if (new < 0 || new >= filecnt)
 		return;
 
-	win_set_cursor(&win, CURSOR_WATCH);
+	if (win.xwin != None)
+		win_set_cursor(&win, CURSOR_WATCH);
 	reset_timeout(slideshow);
 
 	if (new != current)
@@ -587,7 +559,7 @@ void bar_put(win_bar_t *bar, const char *fmt, ...)
 void update_info(void)
 {
 	unsigned int i, fn, fw;
-	char title[TITLE_LEN];
+	char title[256];
 	const char * mark;
 	bool ow_info;
 	win_bar_t *l = &win.bar.l, *r = &win.bar.r;
@@ -656,7 +628,7 @@ void update_info(void)
 			bar_put(r, "%0*d/%d | ", fn, img.multi.sel + 1, img.multi.cnt);
 		}
 		bar_put(r, "%0*d/%d", fw, fileidx + 1, filecnt);
-		ow_info = info.cmd == NULL;
+		ow_info = info.f.err != 0;
 	}
 	if (ow_info) {
 		fn = strlen(files[fileidx].name);
@@ -739,14 +711,14 @@ void run_key_handler(const char *key, unsigned int mask)
 	FILE *pfs;
 	bool marked = mode == MODE_THUMB && markcnt > 0;
 	bool changed = false;
-	int f, i, pfd[2], retval, status;
+	int f, i, pfd[2], status;
 	int fcnt = marked ? markcnt : 1;
 	char kstr[32], oldbar[BAR_L_LEN];
 	struct stat *oldst, st;
 
-	if (keyhandler.cmd == NULL) {
+	if (keyhandler.f.err != 0) {
 		if (!keyhandler.warned) {
-			warn("key handler not installed");
+			error(0, keyhandler.f.err, "%s", keyhandler.f.cmd);
 			keyhandler.warned = true;
 		}
 		return;
@@ -755,15 +727,15 @@ void run_key_handler(const char *key, unsigned int mask)
 		return;
 
 	if (pipe(pfd) < 0) {
-		warn("could not create pipe for key handler");
+		error(0, errno, "pipe");
 		return;
 	}
 	if ((pfs = fdopen(pfd[1], "w")) == NULL) {
+		error(0, errno, "open pipe");
 		close(pfd[0]), close(pfd[1]);
-		warn("could not open pipe for key handler");
 		return;
 	}
-	oldst = s_malloc(fcnt * sizeof(*oldst));
+	oldst = emalloc(fcnt * sizeof(*oldst));
 
 	memcpy(oldbar, win.bar.l.buf, sizeof(oldbar));
 	snprintf(win.bar.l.buf, win.bar.l.size, "[KeyHandling..] %s", oldbar);
@@ -778,14 +750,13 @@ void run_key_handler(const char *key, unsigned int mask)
 	if ((pid = fork()) == 0) {
 		close(pfd[1]);
 		dup2(pfd[0], 0);
-		execl(keyhandler.cmd, keyhandler.cmd, kstr, NULL);
-		warn("could not exec key handler");
-		exit(EXIT_FAILURE);
+		execl(keyhandler.f.cmd, keyhandler.f.cmd, kstr, NULL);
+		error(EXIT_FAILURE, errno, "exec: %s", keyhandler.f.cmd);
 	}
 	close(pfd[0]);
 	if (pid < 0) {
+		error(0, errno, "fork");
 		fclose(pfs);
-		warn("could not fork key handler");
 		goto end;
 	}
 
@@ -798,9 +769,8 @@ void run_key_handler(const char *key, unsigned int mask)
 	}
 	fclose(pfs);
 	waitpid(pid, &status, 0);
-	retval = WEXITSTATUS(status);
-	if (WIFEXITED(status) == 0 || retval != 0)
-		warn("key handler exited with non-zero return value: %d", retval);
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+		error(0, 0, "%s: Exited abnormally", keyhandler.f.cmd);
 
 	for (f = i = 0; f < fcnt; i++) {
 		if ((marked && (files[i].flags & FF_MARK)) || (!marked && i == fileidx)) {
@@ -821,7 +791,7 @@ end:
 		if (changed) {
 			img_close(&img, true);
 			load_image(fileidx);
-		} else if (info.cmd != NULL) {
+		} else if (info.f.err == 0) {
 			info.open = false;
 			open_info();
 		}
@@ -840,9 +810,6 @@ void on_keypress(XKeyEvent *kev)
 	KeySym ksym, shksym;
 	char key;
 	bool dirty = false;
-
-	if (kev == NULL)
-		return;
 
 	if (kev->state & ShiftMask) {
 		kev->state &= ~ShiftMask;
@@ -892,9 +859,6 @@ void on_buttonpress(XButtonEvent *bev)
 	int i, sel;
 	bool dirty = false;
 	static Time firstclick;
-
-	if (bev == NULL)
-		return;
 
 	if (mode == MODE_IMAGE) {
 		win_set_cursor(&win, CURSOR_ARROW);
@@ -1088,17 +1052,18 @@ int main(int argc, char **argv)
 	}
 
 	if (options->recursive || options->from_stdin)
-		filecnt = FILENAME_CNT;
+		filecnt = 1024;
 	else
 		filecnt = options->filecnt;
 
-	files = s_malloc(filecnt * sizeof(*files));
+	files = emalloc(filecnt * sizeof(*files));
 	memset(files, 0, filecnt * sizeof(*files));
 	fileidx = 0;
 
 	if (options->from_stdin) {
+		n = 0;
 		filename = NULL;
-		while ((len = get_line(&filename, &n, stdin)) > 0) {
+		while ((len = getline(&filename, &n, stdin)) > 0) {
 			if (filename[len-1] == '\n')
 				filename[len-1] = '\0';
 			check_add_file(filename, true);
@@ -1110,18 +1075,18 @@ int main(int argc, char **argv)
 		filename = options->filenames[i];
 
 		if (stat(filename, &fstats) < 0) {
-			warn("could not stat file: %s", filename);
+			error(0, errno, "%s", filename);
 			continue;
 		}
 		if (!S_ISDIR(fstats.st_mode)) {
 			check_add_file(filename, true);
 		} else {
 			if (!options->recursive) {
-				warn("ignoring directory: %s", filename);
+				error(0, 0, "%s: Is a directory", filename);
 				continue;
 			}
 			if (r_opendir(&dir, filename) < 0) {
-				warn("could not open directory: %s", filename);
+				error(0, errno, "%s", filename);
 				continue;
 			}
 			start = fileidx;
@@ -1135,10 +1100,8 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (fileidx == 0) {
-		fprintf(stderr, "sxiv: no valid image file given, aborting\n");
-		exit(EXIT_FAILURE);
-	}
+	if (fileidx == 0)
+		error(EXIT_FAILURE, 0, "No valid image file given, aborting");
 
 	filecnt = fileidx;
 	fileidx = options->startnum < filecnt ? options->startnum : 0;
@@ -1151,20 +1114,18 @@ int main(int argc, char **argv)
 		dsuffix = "/.config";
 	}
 	if (homedir != NULL) {
-		char **cmd[] = { &info.cmd, &keyhandler.cmd };
+		extcmd_t *cmd[] = { &info.f, &keyhandler.f };
 		const char *name[] = { "image-info", "key-handler" };
 
 		for (i = 0; i < ARRLEN(cmd); i++) {
-			len = strlen(homedir) + strlen(dsuffix) + strlen(name[i]) + 12;
-			*cmd[i] = (char*) s_malloc(len);
-			snprintf(*cmd[i], len, "%s%s/sxiv/exec/%s", homedir, dsuffix, name[i]);
-			if (access(*cmd[i], X_OK) != 0) {
-				free(*cmd[i]);
-				*cmd[i] = NULL;
-			}
+			n = strlen(homedir) + strlen(dsuffix) + strlen(name[i]) + 12;
+			cmd[i]->cmd = (char*) emalloc(n);
+			snprintf(cmd[i]->cmd, n, "%s%s/sxiv/exec/%s", homedir, dsuffix, name[i]);
+			if (access(cmd[i]->cmd, X_OK) != 0)
+				cmd[i]->err = errno;
 		}
 	} else {
-		warn("could not locate exec directory");
+		error(0, 0, "Exec directory not found");
 	}
 	info.fd = -1;
 
@@ -1181,10 +1142,11 @@ int main(int argc, char **argv)
 	win_open(&win);
 	win_set_cursor(&win, CURSOR_WATCH);
 
+	atexit(cleanup);
+
 	set_timeout(redraw, 25, false);
 
 	run();
-	cleanup();
 
 	return 0;
 }
