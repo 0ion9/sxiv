@@ -51,10 +51,12 @@ typedef struct {
 	int rows;
 	int zl;
 	int zmultl;
+	/* border width */
 	int bw;
 	int dim;
 	bool need_alpha;
-
+	int max_scale;
+	int autozoom_threshold;
 
 	bool dirty;
 } tns_t;

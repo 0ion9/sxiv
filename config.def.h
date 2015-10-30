@@ -33,7 +33,7 @@ static const float zoom_levels[] = {
 	5.0, 6.125, 9.1875,
 	12.5,  25.0,  50.0,  75.0,
 	100.0, 200.0, 300.0, 400.0, 800.0,
-	1600.0, 2400.0
+	1600.0, 2400.0, 16000.0
 };
 
 /* default slideshow delay (in 10th of a second, overwritten via -S option): */
@@ -200,7 +200,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_underscore,    i_fit_to_win,         SCALE_FIT },
 	{ ControlMask,  XK_minus,         i_fit_to_win,         SCALE_WIDTH },
 	{ ControlMask,  XK_underscore,    i_fit_to_win,         SCALE_HEIGHT },
-	{ 0,            XK_D,             i_fit_to_win,         SCALE_DISTORT },
+	{ ControlMask,  XK_D,             i_fit_to_win,         SCALE_DISTORT },
 	{ 0,            XK_comma,         i_rotate,             DEGREE_270 },
 	{ 0,            XK_period,        i_rotate,             DEGREE_90 },
 	{ 0,            XK_greater,       i_rotate,             DEGREE_180 },

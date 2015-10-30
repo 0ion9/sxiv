@@ -36,7 +36,7 @@
 void exif_auto_orientate(const fileinfo_t*);
 #endif
 
-#define INTEGER_FIT(w,h,dim)  MAX(1, dim / MAX(w, h))
+#define INTEGER_FIT(w,h,dim)  ((int)(MAX(1, dim / MAX(w, h))))
 
 static char *cache_dir;
 
@@ -47,7 +47,7 @@ char* tns_cache_filepath(const char *filepath)
 
 	if (cache_dir == NULL || filepath == NULL || *filepath != '/')
 		return NULL;
-	
+
 	if (strncmp(filepath, cache_dir, strlen(cache_dir)) != 0) {
 		/* don't cache images inside the cache directory! */
 		len = strlen(cache_dir) + strlen(filepath) + 2;
@@ -130,7 +130,7 @@ void tns_clean_cache(tns_t *tns)
 
 	if (cache_dir == NULL)
 		return;
-	
+
 	if (r_opendir(&dir, cache_dir) < 0) {
 		warn("could not open thumbnail cache directory: %s", cache_dir);
 		return;
@@ -404,6 +404,44 @@ void tns_unload(tns_t *tns, int n)
 	}
 }
 
+int tns_max_scale(tns_t *tns)
+{
+	thumb_t *t;
+	float avgw, avgh;
+	int maxw, maxh;
+	int nvisiblethumbs;
+	int maxscale;
+	int i;
+
+	avgw = 8;
+	avgh = 8;
+	maxw = 8;
+	maxh = 8;
+	nvisiblethumbs = 0;
+	for (i = tns->first; i < tns->end; i++) {
+		t = &tns->thumbs[i];
+		if (t->im != NULL) {
+			nvisiblethumbs++;
+			avgw += t->w;
+			avgh += t->h;
+			maxw = MAX(t->w, maxw);
+			maxh = MAX(t->h, maxh);
+		}
+	}
+
+	if (nvisiblethumbs > 0) {
+		avgw /= nvisiblethumbs;
+		avgh /= nvisiblethumbs;
+	}
+
+	//	warn("avgw = %d, avgh = %d, imul = %d", avgw, avgh, global_imul);
+	maxscale = MAX(1, INTEGER_FIT(avgw, avgh, thumb_sizes[tns->zl]) + tns->autozoom_threshold);
+	if (tns->win && ((tns->dim + tns->bw) >= MIN(tns->win->w, tns->win->h)))
+		maxscale=1;
+	return maxscale;
+}
+
+
 void tns_check_view(tns_t *tns, bool scrolled)
 {
 	int r;
@@ -430,8 +468,8 @@ void tns_check_view(tns_t *tns, bool scrolled)
 			tns->dirty = true;
 		}
 	}
+	tns->max_scale = tns_max_scale(tns);
 }
-
 
 
 
@@ -440,6 +478,7 @@ void tns_render(tns_t *tns)
 	thumb_t *t;
 	win_t *win;
 	int i, cnt, r, x, y;
+	int cols, rows;
 	char oldaa;
 	int zoom;
 	int fitmul;
@@ -454,8 +493,16 @@ void tns_render(tns_t *tns)
 	imlib_context_set_drawable(win->buf.pm);
 
 	zoom = thumbnail_zoom_levels[tns->zmultl];
-	tns->cols = MAX(1, win->w / tns->dim);
-	tns->rows = MAX(1, win->h / tns->dim);
+	cols = win->w / tns->dim;
+	rows = win->h / tns->dim;
+	if ((cols < 0) || (rows == 0)) {
+		tns->cols = 1;
+		tns->rows = 1;
+		return;
+	} else {
+		tns->cols = cols;
+		tns->rows = rows;
+	}
 
 	if (*tns->cnt < tns->cols * tns->rows) {
 		tns->first = 0;
@@ -471,6 +518,19 @@ void tns_render(tns_t *tns)
 	r = cnt % tns->cols ? 1 : 0;
 	tns->x = x = (win->w - MIN(cnt, tns->cols) * tns->dim) / 2 + tns->bw + 3;
 	tns->y = y = (win->h - (cnt / tns->cols + r) * tns->dim) / 2 + tns->bw + 3;
+	if (tns->x < 0) {
+		warn("negtnx %d; ww,cnt,cols,dim,bw=%d %d %d %d %d %d", x, win->w, cnt, tns->cols, tns->dim, tns->bw);
+		x = MAX(1, (tns->bw + 1) / 2 + 1);
+		tns->x = x;
+	}
+	if (tns->y < 0) {
+		warn("negtny %d; wh,cnt,cols,dim,bw=%d %d %d %d %d %d", y, win->h, cnt, tns->cols, tns->dim, tns->bw);
+		y = MAX(1, (tns->bw + 1) / 2 + 1);
+		tns->y = y;
+	}
+	if (tns->x > 2147483000)
+		warn("postnx %d; ww,cnt,cols,dim,bw=%d %d %d %d %d %d", x, win->w, cnt, tns->cols, tns->dim, tns->bw);
+//	warn("tnx, tny = %d, %d", tns->x, tns->y);
 	tns->loadnext = *tns->cnt;
 	tns->end = tns->first + cnt;
 
@@ -486,10 +546,20 @@ void tns_render(tns_t *tns)
 		t = &tns->thumbs[i];
 		if (t->im != NULL) {
 			fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
-			t->x = x + (((thumb_sizes[tns->zl] * zoom ) / 100) \
-			         - ((t->w * zoom * fitmul) / 100)) / 2;
+			fitmul = MIN(fitmul, tns->max_scale);
+			t->x = ((thumb_sizes[tns->zl] * zoom ) / 100);
+			t->x -= ((t->w * zoom * fitmul) / 100);
+			t->x = t->x / 2 + x;
+			if (t->x < 0) {
+				warn("negtx %d; x=%d", t->x, x);
+				t->x = 1;
+			}
 			t->y = y + (((thumb_sizes[tns->zl] * zoom ) / 100) \
 			         - ((t->h * zoom * fitmul) / 100)) / 2;
+			if (t->y < 0) {
+				warn("negtx %d; x=%d", t->x, x);
+				t->y = 1;
+			}
 			imlib_context_set_image(t->im);
 			if (tns->need_alpha && !imlib_image_has_alpha()) {
 				imlib_context_set_image(imlib_clone_image());
@@ -537,6 +607,7 @@ void tns_mark(tns_t *tns, int n, bool mark)
 
 		zoom = thumbnail_zoom_levels[tns->zmultl];
 		fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
+		fitmul = MIN(fitmul, tns->max_scale);
 
 		x = t->x + ((t->w * zoom * fitmul) / 100);
 		y = t->y + ((t->h * zoom * fitmul) / 100);
@@ -566,15 +637,17 @@ void tns_highlight(tns_t *tns, int n, bool hl)
 		int oxy = (tns->bw + 1) / 2 + 1, owh = tns->bw + 2;
 		int zoom;
 		int fitmul;
+
 		zoom = thumbnail_zoom_levels[tns->zmultl];
 		fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
+		fitmul = MIN(fitmul, tns->max_scale);
 
 		if (hl)
 			col = win->selcol;
 		else
 			col = win->fullscreen ? win->fscol : win->bgcol;
 
-		win_draw_rect(win, t->x - oxy, t->y - oxy, 
+		win_draw_rect(win, t->x - oxy, t->y - oxy,
 		              ((t->w * zoom * fitmul) / 100) + owh, ((t->h * zoom * fitmul) / 100) + owh,
 		              false, tns->bw, col);
 
@@ -685,8 +758,10 @@ bool tns_zoom(tns_t *tns, int d)
 	if (tns->zl != oldzl) {
 		for (i = 0; i < *tns->cnt; i++)
 			tns_unload(tns, i);
+		tns->max_scale = tns_max_scale(tns);
 		tns->dirty = true;
 	} else if (tns->zmultl != oldzmultl){
+		tns->max_scale = tns_max_scale(tns);
 		tns->dirty = true;
 	}
 	return ((tns->zl != oldzl) | (tns->zmultl != oldzmultl));

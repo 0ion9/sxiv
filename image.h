@@ -61,17 +61,21 @@ typedef struct {
 
 	Imlib_Color_Modifier cmod;
 	int gamma;
+	// XXX allow prefix-input for setting silhouetting vals, same idea as gamma.
 	int silhouetting;
 	int opacity;
 	bool negate_alpha;
 	struct {
 		int mode;
-		int startx;
-		int starty;
+		int layout_w;
+		int layout_h;
+		int display_max_w;
+		int display_max_h;
 		int tilesx;
 		int tilesy;
 		unsigned char layout[12][12];
 		bool dirty_cache;
+		// XXX dynamically allocate this so we can cope with animated images
 		Imlib_Image cache[6];
 	} tile;
 	struct {
