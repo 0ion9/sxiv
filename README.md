@@ -150,7 +150,7 @@ of small previews is displayed, making it easy to choose an image to open.
     n,Space      Go [count] images forward
     p,Backspace  Go [count] images backward
     [,]          Go [count] * 10 images backward/forward
-    Ctrl-n,p     Go to the next/previous frame of a multi-frame image
+    Ctrl-n,p     Go [count] frames of a multi-frame image forward/backward
     Ctrl-Space   Play/stop animations of multi-frame images
     h,j,k,l      Scroll image 1/5 of window width/height or [count] pixels
                  left/down/up/right (also with arrow keys)
@@ -189,6 +189,13 @@ on GitHub or get a copy using git with the following command:
     git clone https://github.com/muennich/sxiv.git
 
 **Stable releases**
+
+**[v1.3.2](https://github.com/muennich/sxiv/archive/v1.3.2.tar.gz)**
+*(December 20, 2015)*
+
+  * external key handler gets file paths on stdin, not as arguments
+  * Cache out-of-view thumbnails in the background
+  * Apply gamma correction to thumbnails
 
 **[v1.3.1](https://github.com/muennich/sxiv/archive/v1.3.1.tar.gz)**
 *(November 16, 2014)*
