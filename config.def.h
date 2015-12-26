@@ -132,6 +132,8 @@ static const keymap_t keys[] = {
 	{ 0,            XK_KP_Prior,      i_navigate,           +10 },
 	{ 0,            XK_KP_Home,       i_navigate,           -10 },
 	{ 0,            XF86XK_Save,      i_alternate,          None },
+	{ 0,            XF86XK_Back,      i_navigate_frame,     -1 },
+	{ 0,            XF86XK_Forward,   i_navigate_frame,     1 },
 	{ 0,            XK_braceleft,     g_change_gamma,       -1 },
 	{ 0,            XK_braceright,    g_change_gamma,       +1 },
 	{ ControlMask,  XK_G,             g_change_gamma,        0 },
