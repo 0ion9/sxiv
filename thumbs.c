@@ -40,6 +40,9 @@ void exif_auto_orientate(const fileinfo_t*);
 
 static char *cache_dir;
 
+extern int alternate;
+void tns_alt(tns_t *, int);
+
 char* tns_cache_filepath(const char *filepath)
 {
 	size_t len;
@@ -556,8 +559,12 @@ void tns_render(tns_t *tns)
 				imlib_context_set_anti_alias(0);
 			imlib_render_image_on_drawable_at_size(t->x, t->y,
 				(t->w * zoom * fitmul) / 100, (t->h * zoom * fitmul) / 100);
-			if (tns->files[i].flags & FF_MARK)
+			if (tns->files[i].flags & FF_MARK) {
 				tns_mark(tns, i, true);
+			} else {
+				if (alternate == i)
+					tns_alt(tns, i);
+			}
 			if (t->im != imlib_context_get_image()) {
 				imlib_free_image();
 				imlib_context_set_image(t->im);
@@ -604,6 +611,35 @@ void tns_mark(tns_t *tns, int n, bool mark)
 
 		if (!mark && n == *tns->sel)
 			tns_highlight(tns, n, true);
+	}
+}
+
+void tns_alt(tns_t *tns, int n)
+{
+	if (n >= 0 && n < *tns->cnt && tns->thumbs[n].im != NULL) {
+		win_t *win = tns->win;
+		thumb_t *t = &tns->thumbs[n];
+		unsigned long col = win->fullscreen ? win->fscol : win->bgcol;
+		int x,y;
+		int zoom;
+		int fitmul;
+
+		zoom = thumbnail_zoom_levels[tns->zmultl];
+		fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
+		fitmul = MIN(fitmul, tns->max_scale);
+
+		x = t->x + ((t->w * zoom * fitmul) / 100);
+		y = t->y + ((t->h * zoom * fitmul) / 100);
+
+		win_draw_rect(win, x - 1, y + 1, 1, tns->bw, true, 1, col);
+		win_draw_rect(win, x + 1, y - 1, tns->bw, 1, true, 1, col);
+
+		col = win->selcol;
+
+		win_draw_rect(win, x + 1, y + 1, tns->bw + 1, tns->bw + 1, true, 1, col);
+
+//		if (!mark && n == *tns->sel)
+//			tns_highlight(tns, n, true);
 	}
 }
 

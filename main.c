@@ -101,11 +101,26 @@ timeout_t timeouts[] = {
 	{ { 0, 0 }, false, clear_resize },
 };
 
+fileinfo_t *infobuf1 = NULL;
+thumb_t *thumbbuf1 = NULL;
+int buf1_size = 0;
+fileinfo_t *infobuf2 = NULL;
+thumb_t *thumbbuf2 = NULL;
+int buf2_size = 0;
+
 void cleanup(void)
 {
 	img_close(&img, false);
 	tns_free(&tns);
 	win_close(&win);
+	if (infobuf1 != NULL)
+		free(infobuf1);
+	if (infobuf2 != NULL)
+		free(infobuf2);
+	if (thumbbuf1 != NULL)
+		free(thumbbuf1);
+	if (thumbbuf2 != NULL)
+		free(thumbbuf2);
 }
 
 void check_add_file(char *filename, bool given)
@@ -141,6 +156,87 @@ void check_add_file(char *filename, bool given)
 	fileidx++;
 }
 
+// copy astartcount entries from a, followed by bcount entries from b, followed by aendcount entries from a, into dest
+// aendcount or astartcount may be 0 (but they may not both be 0)
+
+static void mix_arrays(unsigned char *a, unsigned char *b, unsigned char *dest, size_t size, int astartcount, int bcount, int aendcount, int destmax)
+{
+	int destindex = 0;
+
+//	if ((destindex + astartcount) > destmax)
+//		error("array bounds exceeded (bound: %d, to copy: %d)", destmax, destindex + astartcount);
+
+	if (astartcount > 0)
+		memcpy(dest, a, astartcount * size);
+
+	destindex += astartcount;
+	dest += (astartcount * size);
+
+//	if ((destindex + bcount) > destmax)
+//		error("array bounds exceeded (bound: %d, to copy: %d)", destmax, destindex + bcount);
+
+	if (bcount > 0)
+		memcpy(dest, b, bcount * size);
+
+	dest += (bcount * size);
+
+//	if ((destindex + endcount) > destmax)
+//		error("array bounds exceeded (bound: %d, to copy: %d)", destmax, destindex + aendcount);
+
+	if (aendcount > 0)
+		memcpy(dest, a, aendcount * size);
+
+}
+
+void shift_marked_files_to(int index)
+{
+	int unmarked_index, marked_index;
+	int i;
+	if ((buf1_size == 0) || (infobuf1 == NULL) || (thumbbuf1 == NULL) || (buf1_size < (filecnt - markcnt)))
+	{
+		if (infobuf1 != NULL);
+			free(infobuf1);
+		if (thumbbuf1 != NULL);
+			free(thumbbuf1);
+		buf1_size = (filecnt - markcnt);
+		if (buf1_size == 0)
+			return;
+		infobuf1 = (fileinfo_t *) emalloc(sizeof(fileinfo_t) * buf1_size);
+		thumbbuf1 = (thumb_t *) emalloc(sizeof(thumb_t) * buf1_size);
+	}
+
+	if ((buf2_size == 0) || (infobuf2 == NULL) || (thumbbuf2 == NULL) || (buf2_size < markcnt))
+	{
+		if (infobuf2 != NULL);
+			free(infobuf2);
+		if (thumbbuf2 != NULL);
+			free(thumbbuf2);
+		buf2_size = markcnt;
+		if (buf2_size == 0)
+			return;
+		infobuf2 = (fileinfo_t *) emalloc(sizeof(fileinfo_t) * buf2_size);
+		thumbbuf2 = (thumb_t *) emalloc(sizeof(thumb_t) * buf2_size);
+	}
+
+	unmarked_index = 0;
+	marked_index = 0;
+
+	for (i=0; i<filecnt; i++){
+		if (((files + i)->flags & FF_MARK)){
+			memcpy(infobuf2 + marked_index, files + i, sizeof(fileinfo_t));
+			memcpy(thumbbuf2 + marked_index, tns.thumbs + i, sizeof(thumb_t));
+			marked_index++;
+		} else {
+			memcpy(infobuf1 + unmarked_index, files + i, sizeof(fileinfo_t));
+			memcpy(thumbbuf1 + unmarked_index, tns.thumbs + i, sizeof(thumb_t));
+			unmarked_index++;
+		}
+	}
+
+	mix_arrays((unsigned char *)infobuf1, (unsigned char *)infobuf2, (unsigned char *)files, sizeof(fileinfo_t), index, markcnt, filecnt - index, filecnt);
+	mix_arrays((unsigned char *)thumbbuf1, (unsigned char *)thumbbuf2, (unsigned char *)tns.thumbs, sizeof(thumb_t), index, markcnt, filecnt - index, filecnt);
+}
+
 void shift_marked_files(int direction)
 {
 	// shift marked files to either the start (-1) or end (1) of the list.
@@ -155,6 +251,13 @@ void shift_marked_files(int direction)
 
 	if (markcnt == 0)
 		return;
+
+	// adding support for moving to a particular index rather than just the start or end:
+	// * index must be normalized (subtract one from final destination index, for each marked file found before original specified index)
+	// * instead of copying [NONMARKED][MARKED] or vice versa, we must copy [NONMARKED_start][MARKED][NONMARKED_cont] or vice versa.
+	//   to be precise, a normalized destination index of N means that we must copy N entries from nonmarked, followed by all entries from marked,
+	//   followed by the remaining entries from nonmarked.
+
 
         // at last check, this returned 32, 24
         // meaning that for a filelist of 1000 items, 32000+24000 == 46000 bytes are allocated and freed each time
@@ -843,13 +946,13 @@ void on_keypress(XKeyEvent *kev)
 				dirty = true;
 		}
 	}
-	
+
 	if (i == ARRLEN(keys) && (!dirty))
 		run_key_handler(XKeysymToString(ksym), kev->state & ~sh);
-	
+
 	if (dirty)
 		redraw();
-    
+
 	prefix = 0;
 	inputting_prefix = 0;
 }

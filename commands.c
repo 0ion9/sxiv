@@ -157,6 +157,26 @@ bool cg_remove_image(arg_t _)
 }
 
 
+bool cg_reorder_image_to_alternate(arg_t a)
+{
+	long n = (long)a;
+	if (n > 0) {
+		// insert in slot immediately following alternate location (ALT*9876543210...)
+		n = ((alternate + 1) - fileidx) ;
+		shift_file(fileidx, n);
+		if (fileidx < alternate)
+			alternate--;
+	} else {
+		// insert in slot immediately preceding alternate location (...0123456789*ALT)
+		n = (alternate - fileidx);
+		shift_file(fileidx, n);
+		if (fileidx > alternate)
+			alternate++;
+	}
+	tns.dirty = true;
+	return true;
+}
+
 bool cg_reorder_image(arg_t a)
 {
 	long n = (long)a;
@@ -178,6 +198,7 @@ bool cg_reorder_marked_images(arg_t _dir)
 {
 	long dir = (long)_dir;
 	// Moves all marked images as a block to either the start or end of filelist.
+	// XXX support moving to other locations.
 	if (markcnt == 0)
 	{
 		files[fileidx].flags = files[fileidx].flags | FF_MARK;
@@ -198,6 +219,41 @@ bool cg_reorder_marked_images(arg_t _dir)
 	}
 	return true;
 }
+
+bool cg_reorder_marked_images_to_alternate(arg_t a)
+{
+	long n = (long)a;
+	int i;
+	int saved_fileidx;
+
+	if (markcnt == 0) {
+		cg_reorder_image_to_alternate(a);
+		return true;
+	}
+
+	// XXX this is a really bizarre hack
+	// we save the old fileidx, then iterate over the marked files, in reverse, setting fileidx to the index of the marked file and calling cg_reorder_image_to_alternate.
+	saved_fileidx = fileidx;
+	// note:
+	// correctness:
+	//  n < 0:
+	//    i > alt  OK
+	//    i < alt  Rotates marked items inplace
+	//  n > 0:
+	//    i > alt  Items are placed correctly but in the reverse order.
+	//    i < alt  only the 1st item is moved
+	//
+	for (i = 0; i < filecnt; i++) {
+		if (files[i].flags & FF_MARK) {
+			fileidx=i;
+			cg_reorder_image_to_alternate(n);
+		}
+	}
+	// still, it makes for a good clear factorization.
+	fileidx = saved_fileidx;
+	return true;
+}
+
 
 bool cg_first(arg_t _)
 {
@@ -287,7 +343,7 @@ bool cg_navigate_marked(arg_t n)
 {
 	int d, i;
 	int new = fileidx;
-	
+
 	if (prefix > 0)
 		n *= prefix;
 	d = n > 0 ? 1 : -1;
@@ -417,7 +473,7 @@ bool ci_drag(arg_t _)
 
 	if (!XQueryPointer(win.env.dpy, win.xwin, &w, &w, &i, &i, &ox, &oy, &ui))
 		return false;
-	
+
 	win_set_cursor(&win, CURSOR_HAND);
 
 	while (dragging) {
