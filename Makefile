@@ -44,12 +44,12 @@ clean:
 
 install: all
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	install sxiv $(DESTDIR)$(PREFIX)/bin/
+	install sxiv $(DESTDIR)$(PREFIX)/bin/ || cp sxiv $(DESTDIR)$(PREFIX)/bin/
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	sed "s!PREFIX!$(PREFIX)!g; s!VERSION!$(VERSION)!g" sxiv.1 > $(DESTDIR)$(MANPREFIX)/man1/sxiv.1
 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/sxiv.1
 	mkdir -p $(DESTDIR)$(PREFIX)/share/sxiv/exec
-	install exec/* $(DESTDIR)$(PREFIX)/share/sxiv/exec/
+	install exec/* $(DESTDIR)$(PREFIX)/share/sxiv/exec/ || cp exec/* $(DESTDIR)$(PREFIX)/share/sxiv/exec/
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/sxiv
