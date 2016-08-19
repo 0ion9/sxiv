@@ -899,7 +899,7 @@ void img_tiles_recache(img_t *img, bool blend)
 		} else {
 			int c;
 			//warn("FLAT ALPHA");
-			c = img->win->fullscreen ? img->win->fscol : img->win->bgcol;
+			c = img->win->fullscreen ? img->win->fscol.pixel : img->win->bgcol.pixel;
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, img->w, img->h);
 		}
@@ -1042,7 +1042,7 @@ void img_render(img_t *img)
 			imlib_image_put_back_data(data);
 		} else {
 			//warn("FLAT ALPHA");
-			c = win->fullscreen ? win->fscol : win->bgcol;
+			c = win->fullscreen ? win->fscol.pixel : win->bgcol.pixel;
 			imlib_context_set_color(c >> 16 & 0xFF, c >> 8 & 0xFF, c & 0xFF, 0xFF);
 			imlib_image_fill_rectangle(0, 0, dw, dh);
 		}

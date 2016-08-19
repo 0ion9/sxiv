@@ -9,10 +9,9 @@ enum {
 };
 
 /* bar font:
- * (see X(7) section "FONT NAMES" for valid values)
+ * (see fonts-conf(5) subsection "FONT NAMES" for valid values)
  */
-static const char * const BAR_FONT = // "-misc-fixed-*-*-*-*-12-*-*-*-*-*-*-*";
-"-*-proggytiny-*-*-*-*-10-*-*-*-*-*-*-*";
+static const char * const BAR_FONT = "proggytiny";
 
 /* colors:
  * (see X(7) section "COLOR NAMES" for valid values)
