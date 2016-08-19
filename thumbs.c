@@ -182,7 +182,7 @@ void tns_init(tns_t *tns, fileinfo_t *files, const int *cnt, int *sel,
 	tns->zl = MAX(0, tns->zl);
 	tns->zmultl = 0;
 	tns->need_alpha = false;
-	tns_zoom(tns, 0);
+	tns_zoom(tns, 1);
 
 	if ((homedir = getenv("XDG_CACHE_HOME")) == NULL || homedir[0] == '\0') {
 		homedir = getenv("HOME");
