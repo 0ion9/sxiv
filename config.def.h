@@ -11,7 +11,7 @@ enum {
 /* bar font:
  * (see fonts-conf(5) subsection "FONT NAMES" for valid values)
  */
-static const char * const BAR_FONT = "proggytiny";
+static const char * const BAR_FONT = "unifont:size=10";
 
 /* colors:
  * (see X(7) section "COLOR NAMES" for valid values)
