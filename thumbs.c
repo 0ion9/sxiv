@@ -131,7 +131,7 @@ void tns_clean_cache(tns_t *tns)
 	if (cache_dir == NULL)
 		return;
 
-	if (r_opendir(&dir, cache_dir) < 0) {
+	if (r_opendir(&dir, cache_dir, true) < 0) {
 		error(0, errno, "%s", cache_dir);
 		return;
 	}
