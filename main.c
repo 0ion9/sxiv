@@ -31,6 +31,7 @@
 #define XK_TECHNICAL
 #define XK_PUBLISHING
 #define XK_SPECIAL
+#include <time.h>
 #include <X11/keysym.h>
 #include <X11/keysymdef.h>
 #include <X11/XF86keysym.h>
@@ -43,6 +44,7 @@
 #include "thumbs.h"
 #include "util.h"
 #include "window.h"
+#include "autoreload.h"
 
 #define _MAPPINGS_CONFIG
 #include "config.h"
@@ -61,6 +63,7 @@ void slideshow(void);
 void clear_resize(void);
 
 appmode_t mode;
+arl_t arl;
 img_t img;
 tns_t tns;
 win_t win;
@@ -111,6 +114,7 @@ int buf2_size = 0;
 void cleanup(void)
 {
 	img_close(&img, false);
+	arl_cleanup(&arl);
 	tns_free(&tns);
 	win_close(&win);
 	if (infobuf1 != NULL)
@@ -644,6 +648,7 @@ void load_image(int new)
 
 	info.open = false;
 	open_info();
+	arl_setup(&arl, files[fileidx].path);
 
 	if (img.multi.cnt > 0 && img.multi.animate)
 		set_timeout(animate, img.multi.frames[img.multi.sel].delay, true);
@@ -1032,6 +1037,8 @@ void on_buttonpress(XButtonEvent *bev)
 	prefix = 0;
 }
 
+const struct timespec ten_ms = {0, 10000000};
+
 void run(void)
 {
 	int xfd;
@@ -1045,8 +1052,8 @@ void run(void)
 		init_thumb = mode == MODE_THUMB && tns.initnext < filecnt;
 		load_thumb = mode == MODE_THUMB && tns.loadnext < tns.end;
 
-		if ((init_thumb || load_thumb || to_set || info.fd != -1) &&
-		    XPending(win.env.dpy) == 0)
+		if ((init_thumb || load_thumb || to_set || info.fd != -1 ||
+			   arl.fd != -1) && XPending(win.env.dpy) == 0)
 		{
 			if (load_thumb) {
 				set_timeout(redraw, TO_REDRAW_THUMBS, false);
@@ -1068,9 +1075,21 @@ void run(void)
 					FD_SET(info.fd, &fds);
 					xfd = MAX(xfd, info.fd);
 				}
+				if (arl.fd != -1) {
+					FD_SET(arl.fd, &fds);
+					xfd = MAX(xfd, arl.fd);
+				}
 				select(xfd + 1, &fds, 0, 0, to_set ? &timeout : NULL);
 				if (info.fd != -1 && FD_ISSET(info.fd, &fds))
 					read_info();
+				if (arl.fd != -1 && FD_ISSET(arl.fd, &fds)) {
+					if (arl_handle(&arl)) {
+						/* when too fast, imlib2 can't load the image */
+						nanosleep(&ten_ms, NULL);
+						load_image(fileidx);
+						redraw();
+					}
+				}
 			}
 			continue;
 		}
@@ -1099,7 +1118,7 @@ void run(void)
 				break;
 			case ClientMessage:
 				if ((Atom) ev.xclient.data.l[0] == atoms[ATOM_WM_DELETE_WINDOW])
-					return;
+					cmds[g_quit].func(0);
 				break;
 			case ConfigureNotify:
 				if (win_configure(&win, &ev.xconfigure)) {
@@ -1219,6 +1238,7 @@ int main(int argc, char **argv)
 
 	win_init(&win);
 	img_init(&img, &win);
+	arl_init(&arl);
 
 	if ((homedir = getenv("XDG_CONFIG_HOME")) == NULL || homedir[0] == '\0') {
 		homedir = getenv("HOME");
