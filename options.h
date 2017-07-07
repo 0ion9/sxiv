@@ -39,10 +39,12 @@ typedef struct {
 	int gamma;
 	int slideshow;
 	int show_mouse_pos;
+	int framerate;
 
 	/* window: */
 	bool fullscreen;
 	bool hide_bar;
+	long embed;
 	char *geometry;
 	char *res_name;
 

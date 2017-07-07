@@ -4,6 +4,10 @@ sxiv \- Simple X Image Viewer
 .SH SYNOPSIS
 .B sxiv
 .RB [ \-abcfhioqrtvZ ]
+.RB [ \-A
+.IR FRAMERATE ]
+.RB [ \-e
+.IR WID ]
 .RB [ \-G
 .IR GAMMA ]
 .RB [ \-g
@@ -31,6 +35,10 @@ Please note, that the fullscreen mode requires an EWMH/NetWM compliant window
 manager.
 .SH OPTIONS
 .TP
+.BI "\-A " FRAMERATE
+Play animations with a constant frame rate set to
+.IR FRAMERATE .
+.TP
 .B \-a
 Play animations of multi-frame images.
 .TP
@@ -39,6 +47,10 @@ Do not show info bar on bottom of window.
 .TP
 .B \-c
 Remove all orphaned cache files from the thumbnail cache directory and exit.
+.TP
+.BI "\-e " WID
+Embed sxiv's window into window whose ID is
+.IR WID .
 .TP
 .B \-f
 Start in fullscreen mode.
@@ -81,7 +93,9 @@ Be quiet, disable warnings to standard error stream.
 Search the given directories recursively for images to view.
 .TP
 .BI "\-S " DELAY
-Start in slideshow mode. Set the delay between images to DELAY tenths of a second (eg 30=3s).
+Start in slideshow mode. Set the delay between images to
+.I DELAY
+tenths of a second.
 .TP
 .BI "\-s " MODE
 Set scale mode according to MODE character. Supported modes are: [d]own, 

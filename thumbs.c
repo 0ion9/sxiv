@@ -243,13 +243,12 @@ Imlib_Image tns_scale_down(Imlib_Image im, int dim)
 
 bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 {
-	int w, h;
 	int maxwh = thumb_sizes[ARRLEN(thumb_sizes)-1];
 	bool cache_hit = false;
 	char *cfile;
-	float zw, zh;
 	thumb_t *t;
 	fileinfo_t *file;
+	struct stat st;
 	Imlib_Image im = NULL;
 
 	if (n < 0 || n >= *tns->cnt)
@@ -283,8 +282,9 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 			}
 #if HAVE_LIBEXIF
 		} else if (!force) {
-			int pw = 0, ph = 0, x = 0, y = 0;
+			int pw = 0, ph = 0, w, h, x = 0, y = 0;
 			bool err;
+			float zw, zh;
 			ExifData *ed;
 			ExifEntry *entry;
 			ExifContent *ifd;
@@ -341,12 +341,15 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 		}
 	}
 
-	if (im == NULL && (access(file->path, R_OK) < 0 ||
-	    (im = imlib_load_image(file->path)) == NULL))
-	{
-		if (file->flags & FF_WARN)
-			error(0, 0, "%s: Error opening image", file->name);
-		return false;
+	if (im == NULL) {
+		if (access(file->path, R_OK) == -1 ||
+		    stat(file->path, &st) == -1 || !S_ISREG(st.st_mode) ||
+		    (im = imlib_load_image(file->path)) == NULL)
+		{
+			if (file->flags & FF_WARN)
+				error(0, 0, "%s: Error opening image", file->name);
+			return false;
+		}
 	}
 	imlib_context_set_image(im);
 	if (!cache_hit) {

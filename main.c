@@ -811,6 +811,11 @@ void clear_resize(void)
 	resized = false;
 }
 
+Bool is_input_ev(Display *dpy, XEvent *ev, XPointer arg)
+{
+	return ev->type == ButtonPress || ev->type == KeyPress;
+}
+
 void run_key_handler(const char *key, unsigned int mask)
 {
 	pid_t pid;
@@ -821,6 +826,7 @@ void run_key_handler(const char *key, unsigned int mask)
 	int fcnt = marked ? markcnt : 1;
 	char kstr[32], oldbar[BAR_L_LEN];
 	struct stat *oldst, st;
+	XEvent dump;
 
 	if (keyhandler.f.err != 0) {
 		if (!keyhandler.warned) {
@@ -869,7 +875,7 @@ void run_key_handler(const char *key, unsigned int mask)
 	for (f = i = 0; f < fcnt; i++) {
 		if ((marked && (files[i].flags & FF_MARK)) || (!marked && i == fileidx)) {
 			stat(files[i].path, &oldst[f]);
-			fprintf(pfs, "%s\n", files[i].path);
+			fprintf(pfs, "%s\n", files[i].name);
 			f++;
 		}
 	}
@@ -892,6 +898,9 @@ void run_key_handler(const char *key, unsigned int mask)
 			f++;
 		}
 	}
+	/* drop user input events that occurred while running the key handler */
+	while (XCheckIfEvent(win.env.dpy, &dump, is_input_ev, NULL));
+
 end:
 	if (mode == MODE_IMAGE) {
 		if (changed) {

@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -79,6 +80,7 @@ void img_init(img_t *img, win_t *win)
 	img->show_mouse_pos = options->show_mouse_pos;
 	img->multi.cap = img->multi.cnt = 0;
 	img->multi.animate = options->animate;
+	img->multi.framedelay = options->framerate > 0 ? 1000 / options->framerate : 0;
 	img->multi.length = 0;
 	img->tile.mode = 0;
 	for (i = 0; i < ARRLEN(img->tile.cache); i++)
@@ -279,6 +281,7 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 				                             img->multi.cap * sizeof(img_frame_t));
 			}
 			img->multi.frames[img->multi.cnt].im = im;
+			delay = img->multi.framedelay > 0 ? img->multi.framedelay : delay;
 			img->multi.frames[img->multi.cnt].delay = delay > 0 ? delay : DEF_GIF_DELAY;
 			img->multi.length += img->multi.frames[img->multi.cnt].delay;
 			img->multi.cnt++;
@@ -315,8 +318,10 @@ void img_tiles_recache(img_t *, bool);
 bool img_load(img_t *img, const fileinfo_t *file)
 {
 	const char *fmt;
+	struct stat st;
 
-	if (access(file->path, R_OK) < 0 ||
+	if (access(file->path, R_OK) == -1 ||
+	    stat(file->path, &st) == -1 || !S_ISREG(st.st_mode) ||
 	    (img->im = imlib_load_image(file->path)) == NULL)
 	{
 		if (file->flags & FF_WARN)
