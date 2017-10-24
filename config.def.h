@@ -117,6 +117,9 @@ static const keymap_t keys[] = {
 	{ 0,            XK_plusminus,     g_zoom,               +1 },
 	{ 0,            XK_KP_Subtract,   g_zoom,               -1 },
 	{ 0,            XK_identical,     g_zoom,               -1 },
+	{ 0,            XK_a,             g_zoom,               +1 },
+	{ 0,            XK_z,             g_zoom,               -1 },
+
 	{ ControlMask,  XK_R,             t_reload_all,         None },
 	{ 0,            XK_Delete,        g_remove_image,      None },
 
@@ -147,18 +150,24 @@ static const keymap_t keys[] = {
 	{ Mod1Mask   ,  XK_Right,         g_reorder_image,      9999999 },
 	{ ShiftMask  ,  XK_Left,          g_reorder_image,      -16 },
 	{ ShiftMask  ,  XK_Right,         g_reorder_image,      16 },
+/* XXX instead of abusing 'alternate', implement a separate 'target marker' */
 	{ Mod1Mask|ShiftMask,  XK_Left,   g_reorder_image_to_alternate,      -1 },
 	{ Mod1Mask|ShiftMask,  XK_Right,  g_reorder_image_to_alternate,      1 },
 	{ 0          ,  XK_Pointer_Left,  t_move_and_reorder,   DIR_LEFT },
+	{ Mod1Mask   ,  XK_Left,          t_move_and_reorder,   DIR_LEFT },
 	{ 0          ,  XK_Pointer_Right, t_move_and_reorder,   DIR_RIGHT },
+	{ Mod1Mask   ,  XK_Right,         t_move_and_reorder,   DIR_RIGHT },
 	{ 0          ,  XK_Pointer_Up,    t_move_and_reorder,   DIR_UP },
+	{ Mod1Mask   ,  XK_Up,            t_move_and_reorder,   DIR_UP },
 	{ 0          ,  XK_Pointer_Down,  t_move_and_reorder,   DIR_DOWN },
+	{ Mod1Mask   ,  XK_Down,          t_move_and_reorder,   DIR_DOWN },
 	{ Mod1Mask|ControlMask, XK_Left,  g_reorder_marked_images,  -1 },
 	{ Mod1Mask|ControlMask, XK_Right, g_reorder_marked_images, 1 },
 	// xxx absurd. get a less modifiery shortcut for this
 	{ ShiftMask|ControlMask, XK_Left,  g_reorder_marked_images_to_alternate,  -1 },
 	{ ShiftMask|ControlMask, XK_Right, g_reorder_marked_images_to_alternate, 1 },
 	{ 0,            XK_KP_Begin,      g_n_or_last,          None },
+	{ Mod1Mask,     XK_g,             g_n_or_last,          None },
 	{ ControlMask,  XK_space,         i_toggle_animation,   None },
 	{ 0,            XK_Left,          i_scroll,             DIR_LEFT },
 	{ 0,            XK_Down,          i_scroll,             DIR_DOWN },
@@ -170,6 +179,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_rightarrow,    i_scroll,             DIR_RIGHT },
 	{ 0          ,  XK_KP_Down,       i_toggle_animation,   None },
 	{ 0          ,  XK_KP_Enter,      i_toggle_animation,   None },
+	{ ControlMask,  XK_Return,        i_toggle_animation,   None },
 // marking an image should also move to the next image -- see https://github.com/muennich/sxiv/issues/172
 // Note the order of entries here is significant -- we don't want to navigate to next before the toggle is processed.
 	{ 0,            XK_Menu,          g_toggle_image_mark, None },
@@ -179,6 +189,8 @@ static const keymap_t keys[] = {
 	{ ShiftMask,    XK_Menu,          g_unmark_all,     None },
 	{ 0,            XK_KP_Insert,     g_navigate_marked,   -1 },
 	{ 0,            XK_KP_Delete,     g_navigate_marked,   +1 },
+	{ Mod1Mask,     XK_bracketleft,   g_navigate_marked,   -1 },
+	{ Mod1Mask,     XK_bracketright,  g_navigate_marked,   +1 },
 	{ 0,            XK_Left,          t_move_sel,          DIR_LEFT },
 	{ 0,            XK_Down,          t_move_sel,          DIR_DOWN },
 	{ 0,            XK_Up,            t_move_sel,          DIR_UP },
