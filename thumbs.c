@@ -16,20 +16,17 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "sxiv.h"
+#define _THUMBS_CONFIG
+#include "config.h"
+
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <utime.h>
-
-#include "thumbs.h"
-#include "util.h"
-
-#define _THUMBS_CONFIG
-#include "config.h"
 
 #if HAVE_LIBEXIF
 #include <libexif/exif-data.h>
@@ -87,6 +84,9 @@ void tns_cache_write(Imlib_Image im, const char *filepath, bool force)
 	struct stat cstats, fstats;
 	struct utimbuf times;
 	Imlib_Load_Error err = 0;
+
+	if (options->private_mode)
+		return;
 
 	if (stat(filepath, &fstats) < 0)
 		return;
@@ -281,7 +281,7 @@ bool tns_load(tns_t *tns, int n, bool force, bool cache_only)
 				cache_hit = true;
 			}
 #if HAVE_LIBEXIF
-		} else if (!force) {
+		} else if (!force && !options->private_mode) {
 			int pw = 0, ph = 0, w, h, x = 0, y = 0;
 			bool err;
 			float zw, zh;

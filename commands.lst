@@ -24,6 +24,7 @@ G_CMD(toggle_negalpha)
 G_CMD(clone_image)
 
 I_CMD(navigate)
+I_CMD(cursor_navigate)
 I_CMD(alternate)
 I_CMD(navigate_frame)
 I_CMD(toggle_animation)

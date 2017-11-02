@@ -16,6 +16,10 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "sxiv.h"
+#define _IMAGE_CONFIG
+#include "config.h"
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +27,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+<<<<<<< HEAD
 #include "image.h"
 #include "options.h"
 #include "util.h"
@@ -31,6 +36,8 @@
 #include "config.h"
 #include "thumbs.h"
 
+=======
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 #if HAVE_LIBEXIF
 #include <libexif/exif-data.h>
 #endif
@@ -1099,8 +1106,20 @@ bool img_zoom(img_t *img, float z)
 	img->scalemode = SCALE_ZOOM;
 
 	if (zoomdiff(z, img->zoom) != 0) {
+<<<<<<< HEAD
 		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / (img->zoom * img->wmul);
 		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->yzoom * img->hmul);
+=======
+		int x, y;
+
+		win_cursor_pos(img->win, &x, &y);
+		if (x < 0 || x >= img->win->w || y < 0 || y >= img->win->h) {
+			x = img->win->w / 2;
+			y = img->win->h / 2;
+		}
+		img->x = x - (x - img->x) * z / img->zoom;
+		img->y = y - (y - img->y) * z / img->zoom;
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 		img->zoom = z;
 		img->yzoom = z;
 		img->checkpan = true;
@@ -1138,15 +1157,15 @@ bool img_zoom_out(img_t *img)
 	return false;
 }
 
-bool img_move(img_t *img, float dx, float dy)
+bool img_pos(img_t *img, float x, float y)
 {
 	float ox, oy;
 
 	ox = img->x;
 	oy = img->y;
 
-	img->x += dx;
-	img->y += dy;
+	img->x = x;
+	img->y = y;
 
 	img_check_pan(img, true);
 
@@ -1158,10 +1177,15 @@ bool img_move(img_t *img, float dx, float dy)
 	}
 }
 
+bool img_move(img_t *img, float dx, float dy)
+{
+	return img_pos(img, img->x + dx, img->y + dy);
+}
+
 bool img_pan(img_t *img, direction_t dir, int d)
 {
 	/* d < 0: screen-wise
-	 * d = 0: 1/5 of screen
+	 * d = 0: 1/PAN_FRACTION of screen
 	 * d > 0: num of pixels
 	 */
 	float x, y;
@@ -1169,8 +1193,8 @@ bool img_pan(img_t *img, direction_t dir, int d)
 	if (d > 0) {
 		x = y = MAX(1, (float) d * img->zoom);
 	} else {
-		x = img->win->w / (d < 0 ? 1 : 5);
-		y = img->win->h / (d < 0 ? 1 : 5);
+		x = img->win->w / (d < 0 ? 1 : PAN_FRACTION);
+		y = img->win->h / (d < 0 ? 1 : PAN_FRACTION);
 	}
 
 	switch (dir) {

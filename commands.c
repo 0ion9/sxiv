@@ -16,11 +16,16 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "sxiv.h"
+#define _IMAGE_CONFIG
+#include "config.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
+<<<<<<< HEAD
 #include "commands.h"
 #include "image.h"
 #include "options.h"
@@ -34,10 +39,13 @@ void cleanup(void);
 void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
+=======
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 void remove_file(int, bool);
 void clone_file(int);
 void load_image(int);
 void open_info(void);
+int ptr_third_x(void);
 void redraw(void);
 void reset_cursor(void);
 void animate(void);
@@ -395,6 +403,11 @@ bool ci_navigate(arg_t n)
 	}
 }
 
+bool ci_cursor_navigate(arg_t _)
+{
+	return ci_navigate(ptr_third_x() - 1);
+}
+
 bool ci_alternate(arg_t _)
 {
 	load_image(alternate);
@@ -454,27 +467,15 @@ bool ci_scroll_to_edge(arg_t dir)
 	return img_pan_edge(&img, dir);
 }
 
-/* Xlib helper function for i_drag() */
-Bool is_motionnotify(Display *d, XEvent *e, XPointer a)
-{
-	return e != NULL && e->type == MotionNotify;
-}
-
-#define WARP(x,y) \
-	XWarpPointer(win.env.dpy, None, win.xwin, 0, 0, 0, 0, x, y); \
-	ox = x, oy = y; \
-	break
-
 bool ci_drag(arg_t _)
 {
-	int dx = 0, dy = 0, i, ox, oy, x, y;
-	unsigned int ui;
-	bool dragging = true, next = false;
+	int x, y;
+	float px, py;
 	XEvent e;
-	Window w;
 
-	if (!XQueryPointer(win.env.dpy, win.xwin, &w, &w, &i, &i, &ox, &oy, &ui))
+	if ((int)(img.w * img.zoom) <= win.w && (int)(img.h * img.zoom) <= win.h)
 		return false;
+<<<<<<< HEAD
 
 	win_set_cursor(&win, CURSOR_HAND);
 
@@ -515,11 +516,33 @@ bool ci_drag(arg_t _)
 				win_draw(&win);
 			}
 			dx = dy = 0;
+=======
+	
+	win_set_cursor(&win, CURSOR_DRAG);
+
+	win_cursor_pos(&win, &x, &y);
+
+	for (;;) {
+		px = MIN(MAX(0.0, x - win.w*0.1), win.w*0.8) / (win.w*0.8)
+		   * (win.w - img.w * img.zoom);
+		py = MIN(MAX(0.0, y - win.h*0.1), win.h*0.8) / (win.h*0.8)
+		   * (win.h - img.h * img.zoom);
+
+		if (img_pos(&img, px, py)) {
+			img_render(&img);
+			win_draw(&win);
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 		}
+		XMaskEvent(win.env.dpy,
+		           ButtonPressMask | ButtonReleaseMask | PointerMotionMask, &e);
+		if (e.type == ButtonPress || e.type == ButtonRelease)
+			break;
+		while (XCheckTypedEvent(win.env.dpy, MotionNotify, &e));
+		x = e.xmotion.x;
+		y = e.xmotion.y;
 	}
-	win_set_cursor(&win, CURSOR_ARROW);
 	set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
-	reset_timeout(redraw);
+	reset_cursor();
 
 	return true;
 }

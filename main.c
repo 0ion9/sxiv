@@ -16,17 +16,19 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "sxiv.h"
+#define _MAPPINGS_CONFIG
+#include "config.h"
+
 #include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <locale.h>
 #include <signal.h>
 #include <sys/select.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/wait.h>
 #define XK_TECHNICAL
 #define XK_PUBLISHING
@@ -36,18 +38,6 @@
 #include <X11/keysymdef.h>
 #include <X11/XF86keysym.h>
 #include <libgen.h>
-
-#include "types.h"
-#include "commands.h"
-#include "image.h"
-#include "options.h"
-#include "thumbs.h"
-#include "util.h"
-#include "window.h"
-#include "autoreload.h"
-
-#define _MAPPINGS_CONFIG
-#include "config.h"
 
 typedef struct {
 	struct timeval when;
@@ -104,12 +94,18 @@ timeout_t timeouts[] = {
 	{ { 0, 0 }, false, clear_resize },
 };
 
+<<<<<<< HEAD
 fileinfo_t *infobuf1 = NULL;
 thumb_t *thumbbuf1 = NULL;
 int buf1_size = 0;
 fileinfo_t *infobuf2 = NULL;
 thumb_t *thumbbuf2 = NULL;
 int buf2_size = 0;
+=======
+cursor_t imgcursor[3] = {
+	CURSOR_ARROW, CURSOR_ARROW, CURSOR_ARROW
+};
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 
 void cleanup(void)
 {
@@ -409,8 +405,8 @@ void remove_file(int n, bool manual)
 		memmove(files + n, files + n + 1, (filecnt - n - 1) * sizeof(*files));
 	}
 	filecnt--;
-	if (fileidx >= filecnt)
-		fileidx = filecnt - 1;
+	if (n < fileidx)
+		fileidx--;
 	if (n < alternate)
 		alternate--;
 }
@@ -623,6 +619,7 @@ end:
 
 void load_image(int new)
 {
+	bool prev = new < fileidx;
 	static int current;
 
 	if (new < 0 || new >= filecnt)
@@ -640,7 +637,7 @@ void load_image(int new)
 		remove_file(new, false);
 		if (new >= filecnt)
 			new = filecnt - 1;
-		else if (new > 0 && new < fileidx)
+		else if (new > 0 && prev)
 			new--;
 	}
 	files[new].flags &= ~FF_WARN;
@@ -754,6 +751,14 @@ void update_info(void)
 	}
 }
 
+int ptr_third_x(void)
+{
+	int x, y;
+
+	win_cursor_pos(&win, &x, &y);
+	return MAX(0, MIN(2, (x / (win.w * 0.33))));
+}
+
 void redraw(void)
 {
 	int t;
@@ -777,14 +782,18 @@ void redraw(void)
 
 void reset_cursor(void)
 {
-	int i;
+	int c, i;
 	cursor_t cursor = CURSOR_NONE;
 
 	if (mode == MODE_IMAGE) {
 		for (i = 0; i < ARRLEN(timeouts); i++) {
 			if (timeouts[i].handler == reset_cursor) {
-				if (timeouts[i].active)
-					cursor = CURSOR_ARROW;
+				if (timeouts[i].active) {
+					c = ptr_third_x();
+					c = MAX(fileidx > 0 ? 0 : 1, c);
+					c = MIN(fileidx + 1 < filecnt ? 2 : 1, c);
+					cursor = imgcursor[c];
+				}
 				break;
 			}
 		}
@@ -981,8 +990,8 @@ void on_buttonpress(XButtonEvent *bev)
 	static Time firstclick;
 
 	if (mode == MODE_IMAGE) {
-		win_set_cursor(&win, CURSOR_ARROW);
 		set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
+		reset_cursor();
 
 		for (i = 0; i < ARRLEN(buttons); i++) {
 			if (buttons[i].button == bev->button &&
@@ -1101,6 +1110,7 @@ void run(void)
 				XPeekEvent(win.env.dpy, &nextev);
 				switch (ev.type) {
 					case ConfigureNotify:
+					case MotionNotify:
 						discard = ev.type == nextev.type;
 						break;
 					case KeyPress:
@@ -1142,13 +1152,17 @@ void run(void)
 				break;
 			case MotionNotify:
 				if (mode == MODE_IMAGE) {
+<<<<<<< HEAD
 					img.win->mouse.x=(int)((ev.xmotion.x-img.x)/img.zoom);
 					img.win->mouse.y=(int)((ev.xmotion.y-img.y)/img.zoom);
 					update_info();
 					win_draw_bar(&win);
 					XClearWindow(win.env.dpy, win.xwin);
 					win_set_cursor(&win, CURSOR_ARROW);
+=======
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 					set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
+					reset_cursor();
 				}
 				break;
 		}
@@ -1171,6 +1185,8 @@ int main(int argc, char **argv)
 	r_dir_t dir;
 
 	signal(SIGPIPE, SIG_IGN);
+
+	setlocale(LC_COLLATE, "");
 
 	parse_options(argc, argv);
 
@@ -1235,6 +1251,14 @@ int main(int argc, char **argv)
 
 	filecnt = fileidx;
 	fileidx = options->startnum < filecnt ? options->startnum : 0;
+
+	for (i = 0; i < ARRLEN(buttons); i++) {
+		if (buttons[i].cmd == i_cursor_navigate) {
+			imgcursor[0] = CURSOR_LEFT;
+			imgcursor[2] = CURSOR_RIGHT;
+			break;
+		}
+	}
 
 	win_init(&win);
 	img_init(&img, &win);

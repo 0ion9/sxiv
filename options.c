@@ -16,23 +16,20 @@
  * along with sxiv.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <unistd.h>
-
-#include "options.h"
-#include "util.h"
-
+#include "sxiv.h"
 #define _IMAGE_CONFIG
 #include "config.h"
 
-options_t _options;
-const options_t *options = (const options_t*) &_options;
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+opt_t _options;
+const opt_t *options = (const opt_t*) &_options;
 
 void print_usage(void)
 {
-	printf("usage: sxiv [-abcfhioqrtvZ] [-A FRAMERATE] [-e WID] [-G GAMMA] "
+	printf("usage: sxiv [-abcfhiopqrtvZ] [-A FRAMERATE] [-e WID] [-G GAMMA] "
 	       "[-g GEOMETRY] [-N NAME] [-n NUM] [-S DELAY] [-s MODE] [-z ZOOM] "
 	       "FILES...\n");
 }
@@ -74,8 +71,13 @@ void parse_options(int argc, char **argv)
 	_options.quiet = false;
 	_options.thumb_mode = false;
 	_options.clean_cache = false;
+	_options.private_mode = false;
 
+<<<<<<< HEAD
 	while ((opt = getopt(argc, argv, "A:abce:fG:g:himMn:N:oOqrS:s:tvZz:")) != -1) {
+=======
+	while ((opt = getopt(argc, argv, "A:abce:fG:g:hin:N:opqrS:s:tvZz:")) != -1) {
+>>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 		switch (opt) {
 			case '?':
 				print_usage();
@@ -141,6 +143,9 @@ void parse_options(int argc, char **argv)
 			case 'O':
 				_options.to_stdout = false;
 				_options.all_to_stdout = true;
+				break;
+			case 'p':
+				_options.private_mode = true;
 				break;
 			case 'q':
 				_options.quiet = true;
