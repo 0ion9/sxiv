@@ -29,7 +29,7 @@ const opt_t *options = (const opt_t*) &_options;
 
 void print_usage(void)
 {
-	printf("usage: sxiv [-abcfhiopqrtvZ] [-A FRAMERATE] [-e WID] [-G GAMMA] "
+	printf("usage: sxiv [-abcfhimMoOpqrtvZ] [-A FRAMERATE] [-e WID] [-G GAMMA] "
 	       "[-g GEOMETRY] [-N NAME] [-n NUM] [-S DELAY] [-s MODE] [-z ZOOM] "
 	       "FILES...\n");
 }
@@ -73,11 +73,7 @@ void parse_options(int argc, char **argv)
 	_options.clean_cache = false;
 	_options.private_mode = false;
 
-<<<<<<< HEAD
-	while ((opt = getopt(argc, argv, "A:abce:fG:g:himMn:N:oOqrS:s:tvZz:")) != -1) {
-=======
-	while ((opt = getopt(argc, argv, "A:abce:fG:g:hin:N:opqrS:s:tvZz:")) != -1) {
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
+	while ((opt = getopt(argc, argv, "A:abce:fG:g:himMn:N:oOpqrS:s:tvZz:")) != -1) {
 		switch (opt) {
 			case '?':
 				print_usage();

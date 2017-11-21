@@ -90,7 +90,8 @@ typedef enum {
 	SCALE_FIT,
 	SCALE_WIDTH,
 	SCALE_HEIGHT,
-	SCALE_ZOOM
+	SCALE_ZOOM,
+        SCALE_DISTORT
 } scalemode_t;
 
 typedef enum {
@@ -195,7 +196,7 @@ typedef struct {
 typedef struct {
 	img_frame_t *frames;
 	int cap;
-	int cnt;
+	int cnt; 
 	int sel;
 	bool animate;
 	int framedelay;
@@ -206,6 +207,8 @@ struct img {
 	Imlib_Image im;
 	int w;
 	int h;
+        int wmul;
+        int hmul;
 
 	win_t *win;
 	float x;
@@ -213,14 +216,34 @@ struct img {
 
 	scalemode_t scalemode;
 	float zoom;
+	float yzoom; /* always equals zoom except in distort mode, where fit is done on width 
+          and then yzoom is set to fill the window vertically. */
 
 	bool checkpan;
 	bool dirty;
-	bool aa;
+	int aa;
 	bool alpha;
+	int show_mouse_pos;
 
 	Imlib_Color_Modifier cmod;
 	int gamma;
+	// XXX allow prefix-input for setting silhouetting vals, same idea as gamma.
+	int silhouetting;
+	int opacity;
+	bool negate_alpha;
+	struct {
+		int mode;
+		int layout_w;
+		int layout_h;
+		int display_max_w;
+		int display_max_h;
+		int tilesx;
+		int tilesy;
+		unsigned char layout[12][12];
+		bool dirty_cache;
+		// XXX dynamically allocate this so we can cope with animated images
+		Imlib_Image cache[6];
+	} tile;
 
 	struct {
 		bool on;
@@ -244,7 +267,13 @@ bool img_pan(img_t*, direction_t, int);
 bool img_pan_edge(img_t*, direction_t);
 void img_rotate(img_t*, degree_t);
 void img_flip(img_t*, flipdir_t);
-void img_toggle_antialias(img_t*);
+bool img_need_trans(img_t*);
+void img_cycle_antialias(img_t*);
+void img_cycle_silhouetting(img_t*);
+void img_toggle_negalpha(img_t*);
+bool img_cycle_opacity(img_t*, int);
+void img_cycle_tiling(img_t*);
+void img_cycle_scalefactors(img_t*);
 bool img_change_gamma(img_t*, int);
 bool img_frame_navigate(img_t*, int);
 bool img_frame_animate(img_t*);
@@ -257,6 +286,7 @@ struct opt {
 	char **filenames;
 	bool from_stdin;
 	bool to_stdout;
+        bool all_to_stdout;
 	bool recursive;
 	int filecnt;
 	int startnum;
@@ -267,6 +297,7 @@ struct opt {
 	bool animate;
 	int gamma;
 	int slideshow;
+        int show_mouse_pos;
 	int framerate;
 
 	/* window: */
@@ -300,6 +331,7 @@ typedef struct {
 	int y;
 } thumb_t;
 
+  /* XXX was 'typedef struct'. Check this if compilation doesn't work */
 struct tns {
 	fileinfo_t *files;
 	thumb_t *thumbs;
@@ -316,9 +348,13 @@ struct tns {
 	int cols;
 	int rows;
 	int zl;
+        int zmultl;
 	int bw;
 	int dim;
 
+        bool need_alpha;
+        int max_scale;
+        bool autozoom_threshold;
 	bool dirty;
 };
 
@@ -330,7 +366,7 @@ void tns_unload(tns_t*, int);
 void tns_render(tns_t*);
 void tns_mark(tns_t*, int, bool);
 void tns_highlight(tns_t*, int, bool);
-bool tns_move_selection(tns_t*, direction_t, int);
+int tns_move_selection(tns_t*, direction_t, int);
 bool tns_scroll(tns_t*, direction_t, bool);
 bool tns_zoom(tns_t*, int);
 int tns_translate(tns_t*, int, int);
@@ -429,6 +465,12 @@ struct win {
 		XftColor bgcol;
 		XftColor fgcol;
 	} bar;
+        
+        struct {
+                int x;
+                int y;
+        } mouse;
+
 };
 
 extern Atom atoms[ATOM_COUNT];
@@ -441,6 +483,8 @@ void win_toggle_fullscreen(win_t*);
 void win_toggle_bar(win_t*);
 void win_clear(win_t*);
 void win_draw(win_t*);
+/* introduced by mouse coords patch */
+void win_draw_bar(win_t*);
 void win_draw_rect(win_t*, int, int, int, int, bool, int, unsigned long);
 int win_textwidth(const win_env_t*, const char*, unsigned int, bool);
 void win_set_title(win_t*, const char*);

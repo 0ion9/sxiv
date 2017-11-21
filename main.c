@@ -17,9 +17,6 @@
  */
 
 #include "sxiv.h"
-#define _MAPPINGS_CONFIG
-#include "config.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -38,6 +35,9 @@
 #include <X11/keysymdef.h>
 #include <X11/XF86keysym.h>
 #include <libgen.h>
+
+#define _MAPPINGS_CONFIG
+#include "config.h"
 
 typedef struct {
 	struct timeval when;
@@ -94,18 +94,19 @@ timeout_t timeouts[] = {
 	{ { 0, 0 }, false, clear_resize },
 };
 
-<<<<<<< HEAD
+/* XXX still needed? */
+
 fileinfo_t *infobuf1 = NULL;
 thumb_t *thumbbuf1 = NULL;
 int buf1_size = 0;
 fileinfo_t *infobuf2 = NULL;
 thumb_t *thumbbuf2 = NULL;
 int buf2_size = 0;
-=======
+
 cursor_t imgcursor[3] = {
 	CURSOR_ARROW, CURSOR_ARROW, CURSOR_ARROW
 };
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
+
 
 void cleanup(void)
 {
@@ -194,9 +195,9 @@ void shift_marked_files_to(int index)
 	int i;
 	if ((buf1_size == 0) || (infobuf1 == NULL) || (thumbbuf1 == NULL) || (buf1_size < (filecnt - markcnt)))
 	{
-		if (infobuf1 != NULL);
-			free(infobuf1);
-		if (thumbbuf1 != NULL);
+		if (infobuf1 != NULL)
+  	  	  	free(infobuf1);
+		if (thumbbuf1 != NULL)
 			free(thumbbuf1);
 		buf1_size = (filecnt - markcnt);
 		if (buf1_size == 0)
@@ -207,9 +208,9 @@ void shift_marked_files_to(int index)
 
 	if ((buf2_size == 0) || (infobuf2 == NULL) || (thumbbuf2 == NULL) || (buf2_size < markcnt))
 	{
-		if (infobuf2 != NULL);
+		if (infobuf2 != NULL)
 			free(infobuf2);
-		if (thumbbuf2 != NULL);
+		if (thumbbuf2 != NULL)
 			free(thumbbuf2);
 		buf2_size = markcnt;
 		if (buf2_size == 0)
@@ -1152,15 +1153,14 @@ void run(void)
 				break;
 			case MotionNotify:
 				if (mode == MODE_IMAGE) {
-<<<<<<< HEAD
 					img.win->mouse.x=(int)((ev.xmotion.x-img.x)/img.zoom);
 					img.win->mouse.y=(int)((ev.xmotion.y-img.y)/img.zoom);
+                                        /* XXX does this need to be done via a set_timeout now? */
 					update_info();
 					win_draw_bar(&win);
 					XClearWindow(win.env.dpy, win.xwin);
-					win_set_cursor(&win, CURSOR_ARROW);
-=======
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
+//					win_set_cursor(&win, CURSOR_ARROW);
+                                        /* XXX conflicting cursor set? */
 					set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
 					reset_cursor();
 				}

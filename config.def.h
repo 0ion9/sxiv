@@ -40,6 +40,12 @@ static const float zoom_levels[] = {
 enum { SLIDESHOW_DELAY = 900 };
 
 /* default settings for multi-frame gif images: */
+/* Not used any more. REMOVE after checking the Autoplay / Loop behaviour with:
+   * [ ] unlooping gif
+   * [ ] looping gif
+   
+*/
+
 //enum {
 //	GIF_DELAY    = 100, /* delay time (in ms) */
 //	GIF_AUTOPLAY = 1,   /* autoplay when loaded [0/1] */
@@ -52,20 +58,14 @@ enum { SLIDESHOW_DELAY = 900 };
 static const double GAMMA_MAX   = 10.0;
 static const int    GAMMA_RANGE = 32;
 
-<<<<<<< HEAD
+/* command i_scroll pans image 1/PAN_FRACTION of screen width/height */
+static const int PAN_FRACTION = 5;
+
 /* if 0, pixelate images at zoom level != 100%,
  * if 1, antialias images at zoom level != 100%,
  * if 2, pixelate when zoom level >= IMAGE_PIXELIZE_AT ,
  *       antialias otherwise.
- * cycled with 'a' key binding.
-=======
-/* command i_scroll pans image 1/PAN_FRACTION of screen width/height */
-static const int PAN_FRACTION = 5;
-
-/* if false, pixelate images at zoom level != 100%,
- * toggled with 'a' key binding
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
- */
+ * cycled with 'a' key binding. */
 static const int ANTI_ALIAS = 2;
 
 /* when antialias = 2, pixelize if zoom factor > this value.
@@ -250,25 +250,11 @@ static const keymap_t keys[] = {
 /* mouse button mappings for image mode: */
 static const button_t buttons[] = {
 	/* modifiers    button            function              argument */
-<<<<<<< HEAD
-	{ 0,            2,                i_navigate,           +1 },
-	{ 0,            3,                i_navigate,           -1 },
-	{ 0,            1,                i_drag,               None },
-	{ 0,            4,                i_scroll,             DIR_UP },
-	{ 0,            5,                i_scroll,             DIR_DOWN },
-	{ ShiftMask,    4,                i_scroll,             DIR_LEFT },
-	{ ShiftMask,    5,                i_scroll,             DIR_RIGHT },
-	{ 0,            6,                i_scroll,             DIR_LEFT },
-	{ 0,            7,                i_scroll,             DIR_RIGHT },
-	{ ControlMask,  4,                g_zoom,               +1 },
-	{ ControlMask,  5,                g_zoom,               -1 },
-=======
 	{ 0,            1,                i_cursor_navigate,    None },
 	{ 0,            2,                i_drag,               None },
 	{ 0,            3,                g_switch_mode,        None },
 	{ 0,            4,                g_zoom,               +1 },
 	{ 0,            5,                g_zoom,               -1 },
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 };
 
 #endif

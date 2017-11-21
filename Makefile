@@ -62,13 +62,10 @@ clean:
 install: all
 	@echo "INSTALL bin/sxiv"
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
-<<<<<<< HEAD
 	install sxiv $(DESTDIR)$(PREFIX)/bin/ || cp sxiv $(DESTDIR)$(PREFIX)/bin/
-=======
-	cp sxiv $(DESTDIR)$(PREFIX)/bin/
+
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/sxiv
 	@echo "INSTALL sxiv.1"
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	sed "s!PREFIX!$(PREFIX)!g; s!VERSION!$(VERSION)!g" sxiv.1 \
 		>$(DESTDIR)$(MANPREFIX)/man1/sxiv.1

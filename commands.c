@@ -25,22 +25,11 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-<<<<<<< HEAD
-#include "commands.h"
-#include "image.h"
-#include "options.h"
-#include "thumbs.h"
-#include "util.h"
+/* XXX where does the code from old void cleanup(void) go? */
 
-#define _IMAGE_CONFIG
-#include "config.h"
-
-void cleanup(void);
 void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
-=======
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 void remove_file(int, bool);
 void clone_file(int);
 void load_image(int);
@@ -475,48 +464,6 @@ bool ci_drag(arg_t _)
 
 	if ((int)(img.w * img.zoom) <= win.w && (int)(img.h * img.zoom) <= win.h)
 		return false;
-<<<<<<< HEAD
-
-	win_set_cursor(&win, CURSOR_HAND);
-
-	while (dragging) {
-		if (!next)
-			XMaskEvent(win.env.dpy,
-			           ButtonPressMask | ButtonReleaseMask | PointerMotionMask, &e);
-		switch (e.type) {
-			case ButtonPress:
-			case ButtonRelease:
-				dragging = false;
-				break;
-			case MotionNotify:
-				x = e.xmotion.x;
-				y = e.xmotion.y;
-
-				/* wrap the mouse around */
-				if (x <= 0) {
-					WARP(win.w - 2, y);
-				} else if (x >= win.w - 1) {
-					WARP(1, y);
-				} else if (y <= 0) {
-					WARP(x, win.h - 2);
-				} else if (y >= win.h - 1) {
-					WARP(x, 1);
-				}
-				dx += x - ox;
-				dy += y - oy;
-				ox = x;
-				oy = y;
-				break;
-		}
-		if (dragging)
-			next = XCheckIfEvent(win.env.dpy, &e, is_motionnotify, None);
-		if ((!dragging || !next) && (dx != 0 || dy != 0)) {
-			if (img_move(&img, dx, dy)) {
-				img_render(&img);
-				win_draw(&win);
-			}
-			dx = dy = 0;
-=======
 	
 	win_set_cursor(&win, CURSOR_DRAG);
 
@@ -524,14 +471,13 @@ bool ci_drag(arg_t _)
 
 	for (;;) {
 		px = MIN(MAX(0.0, x - win.w*0.1), win.w*0.8) / (win.w*0.8)
-		   * (win.w - img.w * img.zoom);
+		   * (win.w - img.w * (img.zoom*img.wmul));
 		py = MIN(MAX(0.0, y - win.h*0.1), win.h*0.8) / (win.h*0.8)
-		   * (win.h - img.h * img.zoom);
+		   * (win.h - img.h * (img.yzoom*img.hmul));
 
 		if (img_pos(&img, px, py)) {
 			img_render(&img);
 			win_draw(&win);
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 		}
 		XMaskEvent(win.env.dpy,
 		           ButtonPressMask | ButtonReleaseMask | PointerMotionMask, &e);

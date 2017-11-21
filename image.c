@@ -27,17 +27,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-<<<<<<< HEAD
-#include "image.h"
-#include "options.h"
-#include "util.h"
-
-#define _IMAGE_CONFIG
-#include "config.h"
-#include "thumbs.h"
-
-=======
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
 #if HAVE_LIBEXIF
 #include <libexif/exif-data.h>
 #endif
@@ -1106,10 +1095,8 @@ bool img_zoom(img_t *img, float z)
 	img->scalemode = SCALE_ZOOM;
 
 	if (zoomdiff(z, img->zoom) != 0) {
-<<<<<<< HEAD
-		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / (img->zoom * img->wmul);
-		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->yzoom * img->hmul);
-=======
+//		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / (img->zoom * img->wmul);
+//		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->yzoom * img->hmul);
 		int x, y;
 
 		win_cursor_pos(img->win, &x, &y);
@@ -1117,9 +1104,8 @@ bool img_zoom(img_t *img, float z)
 			x = img->win->w / 2;
 			y = img->win->h / 2;
 		}
-		img->x = x - (x - img->x) * z / img->zoom;
-		img->y = y - (y - img->y) * z / img->zoom;
->>>>>>> 9dabc5f9883b80286b91f73ea4dcf9fd3d1ad11c
+		img->x = x - (x - img->x) * z / (img->zoom * img->wmul);
+		img->y = y - (y - img->y) * z / (img->yzoom * img->hmul);
 		img->zoom = z;
 		img->yzoom = z;
 		img->checkpan = true;
