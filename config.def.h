@@ -240,7 +240,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_exclamdown,    i_flip,               FLIP_HORIZONTAL },
 	{ 0,            XK_emdash,        i_flip,               FLIP_VERTICAL },
 	{ ControlMask,  XK_S,             i_slideshow,          None },
-
+	{ 0,            XK_P,             i_print_mouse_pos,    None },
 	{ ControlMask,  XK_P,             i_toggle_mouse_pos,   None },
 	{ ControlMask,  XK_A,             i_cycle_antialias,    None },
 	{ ControlMask,  XK_T,             i_toggle_alpha,       None },

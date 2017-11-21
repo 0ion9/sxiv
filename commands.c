@@ -439,6 +439,19 @@ bool ci_toggle_mouse_pos(arg_t a)
 	return true;
 }
 
+bool ci_print_mouse_pos(arg_t a)
+{
+//	error(0, 0, "pmp:stubbed");
+	if (img.show_mouse_pos == 1){
+		error(0, 0, "@: %d|%d", img.win->mouse.x, img.win->mouse.y);
+	} else {
+		error(0, 0, "@: %%%.1f|%.1f", \
+                                        ((float)img.win->mouse.x * 100) / ((float)img.w), \
+                                        ((float)img.win->mouse.y * 100) / ((float)img.h));
+        }
+        return true;
+}
+
 bool ci_cycle_tiling(arg_t _)
 {
 	img_cycle_tiling(&img);
