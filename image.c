@@ -529,6 +529,7 @@ bool img_fit(img_t *img)
 		img->yzoom = z;
 		if (img->scalemode == SCALE_DISTORT)
 			img->yzoom = zh;
+
 		img_update_antialias(img);
 		img->dirty = true;
 		return true;
@@ -727,7 +728,7 @@ void img_draw_tiles(img_t *img)
 	if ((ntiles * (img->w * img->zoom * img->wmul)) < win->w)
 		ntiles++;
 	dh = win->h / (img->h * img->yzoom * img->hmul);
-	if ((dh * (img->h * img->yzoom * img->hmul)) < win->h);
+	if ((dh * (img->h * img->yzoom * img->hmul)) < win->h)
 		dh++;
 	ntiles = ntiles * dh;
 	winw = win->w;
