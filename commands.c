@@ -295,9 +295,9 @@ bool cg_zoom(arg_t d)
 	if (mode == MODE_THUMB)
 		return tns_zoom(&tns, d);
 	else if (d > 0)
-		return img_zoom_in(&img);
+		return img_zoom_in(&img, d);
 	else if (d < 0)
-		return img_zoom_out(&img);
+		return img_zoom_out(&img, 0 - d);
 	else
 		return false;
 }

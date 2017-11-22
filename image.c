@@ -1118,7 +1118,7 @@ bool img_zoom(img_t *img, float z)
 	}
 }
 
-bool img_zoom_in(img_t *img)
+bool img_zoom_in(img_t *img, int amount)
 {
 	int i;
 	float z;
@@ -1126,12 +1126,14 @@ bool img_zoom_in(img_t *img)
 	for (i = 1; i < ARRLEN(zoom_levels); i++) {
 		z = zoom_levels[i] / 100.0;
 		if (zoomdiff(z, img->zoom) > 0)
+			amount -= 1;
+                if (amount == 0)
 			return img_zoom(img, z);
 	}
 	return false;
 }
 
-bool img_zoom_out(img_t *img)
+bool img_zoom_out(img_t *img, int amount)
 {
 	int i;
 	float z;
@@ -1139,6 +1141,8 @@ bool img_zoom_out(img_t *img)
 	for (i = ARRLEN(zoom_levels) - 2; i >= 0; i--) {
 		z = zoom_levels[i] / 100.0;
 		if (zoomdiff(z, img->zoom) < 0)
+                        amount -= 1;
+                if (amount == 0)
 			return img_zoom(img, z);
 	}
 	return false;
