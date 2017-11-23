@@ -181,8 +181,6 @@ static const keymap_t keys[] = {
 	{ 0,            XK_rightt,        i_navigate,           +10 },
 	{ 0,            XK_braceleft,     g_change_gamma,       -1 },
 	{ 0,            XK_braceright,    g_change_gamma,       +1 },
-	{ AltMask,      XK_bracketleft,   g_navigate_marked,    -1 },
-	{ AltMask,      XK_bracketright,  g_navigate_marked,    +1 },
 	{ 0,            XK_backslash,     i_flip,               FLIP_HORIZONTAL },
 	{ 0,            XK_exclamdown,    i_flip,               FLIP_HORIZONTAL },
 	{ 0,            XK_Delete,        g_remove_image,      None },
@@ -199,8 +197,15 @@ static const keymap_t keys[] = {
 	{ ControlMask,  XK_A,             i_cycle_antialias,    None },
         // XXX with inotify, reloadall may not be needed.
 	{ ControlMask,  XK_R,             t_reload_all,         None },
+	{ 0,            XK_s,             g_navigate_marked,    -1 },
+//	{ 0,            XK_s,             i_navigate,           -10 },
+//	{ 0,            XK_s,             g_scroll_screen,      DIR_UP },
 	{ 0          ,  XK_S,             g_cycle_silhouetting, None },
 	{ ControlMask,  XK_S,             i_slideshow,          None },
+        // xxx fallback doesn't always occur correctly.
+	{ 0,            XK_t,             g_navigate_marked,    +1 },
+//	{ 0,            XK_t,             i_navigate,           +10 },
+//	{ 0,            XK_t,             g_scroll_screen,      DIR_DOWN },
 	{ ControlMask,  XK_t,             g_toggle_negalpha,    None },
 	{ 0          ,  XK_T,             g_cycle_opacity,      0 },
 	{ ControlMask,  XK_T,             i_toggle_alpha,       None },
@@ -220,9 +225,11 @@ static const keymap_t keys[] = {
 	{ 0,            XK_z,             g_zoom,               -2 },
         // x 
 	{ 0,            XK_x,             i_navigate_frame,     -1 },
-	{ 0          ,  XK_X,             i_cycle_scalefactor,  None },
-	{ 0,            XK_c,             i_navigate_frame,     1 },
-	{ 0          ,  XK_C,             g_clone_image,        None },
+	{ 0,            XK_x,             i_navigate,           -1 },
+	{ 0,            XK_X,             i_cycle_scalefactor,  None },
+	{ 0,            XK_c,             i_navigate_frame,     +1 },
+	{ 0,            XK_c,             i_navigate,           +1 },
+	{ 0,            XK_C,             g_clone_image,        None },
         { ControlMask,  XK_B,             g_toggle_bar,         None },
         // k
         // m
