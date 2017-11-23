@@ -229,7 +229,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_X,             i_cycle_scalefactor,  None },
 	{ 0,            XK_c,             i_navigate_frame,     +1 },
 	{ 0,            XK_c,             i_navigate,           +1 },
-	{ 0,            XK_C,             g_clone_image,        None },
+	{ 0,            XK_C,             g_clone_image,        1 },
         { ControlMask,  XK_B,             g_toggle_bar,         None },
         // k
         // m

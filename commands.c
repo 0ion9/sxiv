@@ -137,9 +137,14 @@ bool cg_reload_image(arg_t _)
 	return true;
 }
 
-bool cg_clone_image(arg_t _)
+bool cg_clone_image(arg_t n)
 {
-	clone_file(fileidx);
+	if (prefix != 0)
+		n*=prefix;
+        while (n>0) {
+		clone_file(fileidx);
+		n--;
+	}
 	return true;
 }
 
