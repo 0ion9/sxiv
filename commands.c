@@ -412,7 +412,7 @@ bool ci_navigate_frame(arg_t d)
 {
 	if (prefix > 0)
 		d *= prefix;
-	return !img.multi.animate && img_frame_navigate(&img, d);
+	return img_frame_navigate(&img, d);
 }
 
 bool ci_toggle_animation(arg_t _)
