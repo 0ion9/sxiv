@@ -223,16 +223,24 @@ static const keymap_t keys[] = {
 	{ 0,            XK_KP_Begin,      g_n_or_last,          None },
 	{ 0,            XK_KP_Right,      i_navigate,           +1 },
 	{ 0,            XK_z,             g_zoom,               -2 },
-        // x 
 	{ 0,            XK_x,             i_navigate_frame,     -1 },
+        { 0,               0,             0,                    0 },
 	{ 0,            XK_x,             i_navigate,           -1 },
+	{ 0,            XK_x,             t_move_sel,           DIR_LEFT },
 	{ 0,            XK_X,             i_cycle_scalefactor,  None },
 	{ 0,            XK_c,             i_navigate_frame,     +1 },
+        { 0,               0,             0,                    0 },
 	{ 0,            XK_c,             i_navigate,           +1 },
+	{ 0,            XK_c,             t_move_sel,           DIR_RIGHT },
 	{ 0,            XK_C,             g_clone_image,        1 },
-        { ControlMask,  XK_B,             g_toggle_bar,         None },
+        { 0,            XK_B,             g_toggle_bar,         None },
         // k
-        // m
+	{ 0,            XK_m,             g_toggle_image_mark,  None },
+	{ 0,            XK_m,             i_navigate,           +1 },
+	{ 0,            XK_m,             t_move_sel,           DIR_RIGHT },
+/* use C-Menu to do this instead, it's much easier */
+//	{ ControlMask,  XK_m,             g_reverse_marks,      None },
+	{ 0,            XK_M,             g_unmark_all,         None },
         // ,
 	{ 0,            XK_comma,         i_rotate,             DEGREE_270 },
 	{ 0,            XK_period,        i_rotate,             DEGREE_90 },
