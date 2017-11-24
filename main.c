@@ -964,6 +964,9 @@ void on_keypress(XKeyEvent *kev)
 		prefix = prefix * 10 + (int) (key - '0');
 		return;
 	} else for (i = 0; i < ARRLEN(keys); i++) {
+                if ((dirty == true) && (keys[i].ksym == 0))
+			break;
+
 		if (keys[i].ksym == ksym &&
 		    MODMASK(keys[i].mask | sh) == MODMASK(kev->state) &&
 		    keys[i].cmd >= 0 && keys[i].cmd < CMD_COUNT &&
