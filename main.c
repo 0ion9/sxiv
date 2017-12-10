@@ -665,10 +665,11 @@ void update_info(void)
 {
 	unsigned int i, fn, fw;
 	char title[256];
-	const char * mark;
+	char mark[2];
 	win_bar_t *l = &win.bar.l, *r = &win.bar.r;
 
 	/* update window title */
+        mark[0] = 0;
 	if (mode == MODE_THUMB) {
 		win_set_title(&win, "sxiv");
 	} else {
@@ -680,7 +681,13 @@ void update_info(void)
 	if (win.bar.h == 0)
 		return;
 	for (fw = 0, i = filecnt; i > 0; fw++, i /= 10);
-	mark = files[fileidx].flags & FF_MARK ? "*" : (markcnt > 0 ? "{}" : "");
+	if (files[fileidx].flags & FF_MARK) {
+		strncpy(mark, "*", 2);
+        } else {
+		if (markcnt > 0)
+			strncpy(mark, "-", 2);
+        }
+
 	l->p = l->buf;
 	r->p = r->buf;
 	if (mode == MODE_THUMB) {
@@ -691,7 +698,7 @@ void update_info(void)
 		else
 			strncpy(l->buf, files[fileidx].name, l->size);
 
-		if (strlen(mark) > 0 && mark[0] == '*'){
+		if (strlen(mark) > 0){
 			bar_put(r, "%d", markcnt);
 			bar_put(r, "%s %0*d/%d", mark, fw, fileidx + 1, filecnt);
 		} else {
