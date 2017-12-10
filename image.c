@@ -311,21 +311,35 @@ bool img_load_gif(img_t *img, const fileinfo_t *file)
 
 void img_tiles_recache(img_t *, bool);
 
+Imlib_Image img_open(const fileinfo_t *file)
+{
+	struct stat st;
+	Imlib_Image im = NULL;
+
+	if (access(file->path, R_OK) == 0 &&
+	    stat(file->path, &st) == 0 && S_ISREG(st.st_mode))
+	{
+		im = imlib_load_image(file->path);
+		if (im != NULL) {
+			imlib_context_set_image(im);
+			if (imlib_image_get_data_for_reading_only() == NULL) {
+				imlib_free_image();
+				im = NULL;
+			}
+		}
+	}
+	if (im == NULL && (file->flags & FF_WARN))
+		error(0, 0, "%s: Error opening image", file->name);
+	return im;
+}
+
 bool img_load(img_t *img, const fileinfo_t *file)
 {
 	const char *fmt;
-	struct stat st;
 
-	if (access(file->path, R_OK) == -1 ||
-	    stat(file->path, &st) == -1 || !S_ISREG(st.st_mode) ||
-	    (img->im = imlib_load_image(file->path)) == NULL)
-	{
-		if (file->flags & FF_WARN)
-			error(0, 0, "%s: Error opening image", file->name);
+	if ((img->im = img_open(file)) == NULL)
 		return false;
-	}
 
-	imlib_context_set_image(img->im);
 	imlib_image_set_changes_on_disk();
 
 #if HAVE_LIBEXIF
@@ -598,7 +612,7 @@ void _img_update_tiling_layout(img_t *img, int layout_index)
 {
 	int x, y;
 	unsigned char v;
-	char buf[13];
+        char buf[13];
     switch (layout_index) {
 		case 0:
 			//warn("SETTING NOFLIPS LAYOUT");
@@ -1468,7 +1482,7 @@ bool img_change_gamma(img_t *img, int d)
 static int _scale_factors[3][2] = {
   {1, 1},
   {2, 1},
-  {1, 2},
+  {1, 2}
 };
 
 void img_cycle_scalefactors(img_t *img)

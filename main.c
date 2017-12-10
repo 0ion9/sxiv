@@ -127,7 +127,6 @@ void cleanup(void)
 void check_add_file(char *filename, bool given)
 {
 	char *path;
-	const char *bn;
 
 	if (*filename == '\0')
 		return;
@@ -148,10 +147,6 @@ void check_add_file(char *filename, bool given)
 
 	files[fileidx].name = estrdup(filename);
 	files[fileidx].path = path;
-	if ((bn = strrchr(files[fileidx].name , '/')) != NULL && bn[1] != '\0')
-		files[fileidx].base = ++bn;
-	else
-		files[fileidx].base = files[fileidx].name;
 	if (given)
 		files[fileidx].flags |= FF_WARN;
 	fileidx++;
@@ -433,7 +428,7 @@ void clone_file(int n)
 		markcnt++;
 	fprintf(stderr, "sxiv: cloning index %d\n", n);
 	for (i=0; i < filecnt; i++){
-		fprintf(stderr, "%d : %s;%s;%s\n", i, files[i].path, files[i].name, files[i].base);
+		fprintf(stderr, "%d : %s;%s;\n", i, files[i].path, files[i].name);
 	}
 	if (tns.thumbs == NULL)
 		tns_init(&tns, files, &filecnt, &fileidx, &win);
@@ -448,7 +443,6 @@ void clone_file(int n)
 	newpath = newname;
 	if (files[n].path != files[n].name)
 		newpath = strdup(files[n].path);
-	newbase = strdup(files[n].base);
 	fprintf(stderr, "sxiv: newp,n,b = %016" PRIxPTR " %016" PRIxPTR "%016" PRIxPTR "\n", (uintptr_t) newpath, (uintptr_t) newname, (uintptr_t) newbase);
 	newinfo = (fileinfo_t *) emalloc(sizeof(*oldinfo) * (filecnt + 1));
 	if (oldthumb != NULL)
@@ -466,7 +460,7 @@ void clone_file(int n)
 		memcpy(newthumb + (n + 1), oldthumb + n, sizeof(*oldthumb));
 	newinfo[n+1].name = newname;
 	newinfo[n+1].path = newpath;
-	newinfo[n+1].base = newbase;
+        //xxx copy flags?
 	if (n < (filecnt - 1)) {
 		memcpy(newinfo + (n + 2), files + n + 1, (filecnt - (n + 1)) * sizeof(*files));
 		if (oldthumb != NULL)
@@ -491,7 +485,7 @@ void clone_file(int n)
 	if (n < alternate)
 		alternate++;
 	for (i=0; i < filecnt; i++){
-		fprintf(stderr, "%d : %s;%s;%s\n", i, newinfo[i].path, files[i].name, files[i].base);
+		fprintf(stderr, "%d : %s;%s;\n", i, newinfo[i].path, files[i].name);
 	}
 }
 
@@ -665,12 +659,13 @@ void bar_put(win_bar_t *bar, const char *fmt, ...)
 	va_end(ap);
 }
 
+#define BAR_SEP "  "
+
 void update_info(void)
 {
 	unsigned int i, fn, fw;
 	char title[256];
 	const char * mark;
-	bool ow_info;
 	win_bar_t *l = &win.bar.l, *r = &win.bar.r;
 
 	/* update window title */
@@ -689,15 +684,13 @@ void update_info(void)
 	l->p = l->buf;
 	r->p = r->buf;
 	if (mode == MODE_THUMB) {
-		if (tns.loadnext < tns.end) {
+		if (tns.loadnext < tns.end)
 			bar_put(l, "Loading... %0*d", fw, tns.loadnext + 1);
-			ow_info = false;
-		} else if (tns.initnext < filecnt) {
+		else if (tns.initnext < filecnt)
 			bar_put(l, "Caching... %0*d", fw, tns.initnext + 1);
-			ow_info = false;
-		} else {
-			ow_info = true;
-		}
+		else
+			strncpy(l->buf, files[fileidx].name, l->size);
+
 		if (strlen(mark) > 0 && mark[0] == '*'){
 			bar_put(r, "%d", markcnt);
 			bar_put(r, "%s %0*d/%d", mark, fw, fileidx + 1, filecnt);
@@ -709,46 +702,36 @@ void update_info(void)
 			bar_put(r, "%s ", mark);
 		if (img.ss.on) {
 			if (img.ss.delay <= 90000) {
-	                        bar_put(r, "%.1fs | ", ((float)img.ss.delay) / 1000.);
+	                        bar_put(r, "%.1fs" BAR_SEP, ((float)img.ss.delay) / 1000.);
 	                } else if (img.ss.delay <= (90 * 60 * 1000)) {
-	                        bar_put(r, "%.1fm | ", ((float)img.ss.delay) / (60. * 1000.));
+	                        bar_put(r, "%.1fm" BAR_SEP, ((float)img.ss.delay) / (60. * 1000.));
 	                } else {
-	                        bar_put(r, "%.2fh | ", ((float)img.ss.delay) / (60. * 60 * 1000.));
+	                        bar_put(r, "%.2fh" BAR_SEP, ((float)img.ss.delay) / (60. * 60 * 1000.));
 	                }
                 }
 		if (img.gamma != 0)
-			bar_put(r, "G%+d | ", img.gamma);
+			bar_put(r, "G%+d" BAR_SEP, img.gamma);
 		if (img.win->mouse.x >= 0 && \
 		    img.win->mouse.x < img.w && \
 		    img.win->mouse.y >= 0 && \
 		    img.win->mouse.y < img.h && \
 		    img.show_mouse_pos > 0) {
 			if (img.show_mouse_pos == 1){
-				bar_put(r, "(%d, %d) | ", img.win->mouse.x, img.win->mouse.y);
+				bar_put(r, "(%d, %d)" BAR_SEP, img.win->mouse.x, img.win->mouse.y);
 			} else {
-				bar_put(r, "(%.1f%%, %.1f%%) | ", \
+				bar_put(r, "(%.1f%%, %.1f%%)" BAR_SEP, \
 					((float)img.win->mouse.x * 100) / ((float)img.w), \
 					((float)img.win->mouse.y * 100) / ((float)img.h));
 			}
 		}
-		bar_put(r, "%3d%% | ", (int) (img.zoom * 100.0));
+		bar_put(r, "%3d%%" BAR_SEP, (int) (img.zoom * 100.0));
 		if (img.multi.cnt > 0) {
 			for (fn = 0, i = img.multi.cnt; i > 0; fn++, i /= 10);
-			bar_put(r, "%0*d/%d | ", fn, img.multi.sel + 1, img.multi.cnt);
+			bar_put(r, "%0*d/%d" BAR_SEP, fn, img.multi.sel + 1, img.multi.cnt);
 		}
 		bar_put(r, "%0*d/%d", fw, fileidx + 1, filecnt);
-		ow_info = info.f.err != 0;
-	}
-	if (ow_info) {
-		fn = strlen(files[fileidx].name);
-		if (fn < l->size &&
-		    win_textwidth(&win.env, files[fileidx].name, fn, true) +
-		    win_textwidth(&win.env, r->buf, r->p - r->buf, true) < win.w)
-		{
+		if (info.f.err)
 			strncpy(l->buf, files[fileidx].name, l->size);
-		} else {
-			strncpy(l->buf, files[fileidx].base, l->size);
-		}
 	}
 }
 
