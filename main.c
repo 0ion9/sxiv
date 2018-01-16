@@ -926,19 +926,20 @@ end:
 void on_keypress(XKeyEvent *kev)
 {
 	int i;
-	unsigned int sh;
+	unsigned int sh = 0;
 	KeySym ksym, shksym;
-	char key;
+	char dummy, key;
 	bool dirty = false;
+
+	XLookupString(kev, &key, 1, &ksym, NULL);
 
 	if (kev->state & ShiftMask) {
 		kev->state &= ~ShiftMask;
-		XLookupString(kev, &key, 1, &shksym, NULL);
+		XLookupString(kev, &dummy, 1, &shksym, NULL);
 		kev->state |= ShiftMask;
+		if (ksym != shksym)
+			sh = ShiftMask;
 	}
-	XLookupString(kev, &key, 1, &ksym, NULL);
-	sh = (kev->state & ShiftMask) && ksym != shksym ? ShiftMask : 0;
-
 	if (IsModifierKey(ksym))
 		return;
 
