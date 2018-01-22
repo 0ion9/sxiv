@@ -531,7 +531,7 @@ bool img_fit(img_t *img)
 
         if (img->scalemode != SCALE_DISTORT) {
 		z = MAX(z, zoom_min);
-		z = MIN(z, zmax);
+		z = MIN(z, zoom_max);
 	} else {
 		z = MAX(0.0001, z);
 	}
