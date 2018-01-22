@@ -473,9 +473,9 @@ bool ci_scroll_to_edge(arg_t dir)
 	return img_pan_edge(&img, dir);
 }
 
-bool ci_drag(arg_t _)
+bool ci_drag(arg_t mode)
 {
-	int x, y;
+	int x, y, ox, oy;
 	float px, py;
 	XEvent e;
 
@@ -485,12 +485,19 @@ bool ci_drag(arg_t _)
 	win_set_cursor(&win, CURSOR_DRAG);
 
 	win_cursor_pos(&win, &x, &y);
+	ox = x;
+	oy = y;
 
 	for (;;) {
-		px = MIN(MAX(0.0, x - win.w*0.1), win.w*0.8) / (win.w*0.8)
-		   * (win.w - img.w * (img.zoom*img.wmul));
-		py = MIN(MAX(0.0, y - win.h*0.1), win.h*0.8) / (win.h*0.8)
-		   * (win.h - img.h * (img.yzoom*img.hmul));
+		if (mode == DRAG_ABSOLUTE) {
+			px = MIN(MAX(0.0, x - win.w*0.1), win.w*0.8) / (win.w*0.8)
+			   * (win.w - img.w * (img.zoom * img.wmul));
+			py = MIN(MAX(0.0, y - win.h*0.1), win.h*0.8) / (win.h*0.8)
+			   * (win.h - img.h * (img.zoom * img.hmul));
+		} else {
+			px = img.x + x - ox;
+			py = img.y + y - oy;
+		}
 
 		if (img_pos(&img, px, py)) {
 			img_render(&img);
@@ -501,6 +508,8 @@ bool ci_drag(arg_t _)
 		if (e.type == ButtonPress || e.type == ButtonRelease)
 			break;
 		while (XCheckTypedEvent(win.env.dpy, MotionNotify, &e));
+		ox = x;
+		oy = y;
 		x = e.xmotion.x;
 		y = e.xmotion.y;
 	}

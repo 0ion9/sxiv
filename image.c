@@ -39,9 +39,9 @@ enum { DEF_GIF_DELAY = 75 };
 float zoom_min;
 float zoom_max;
 
-static int zoomdiff(float z1, float z2)
+static int zoomdiff(img_t *img, float z)
 {
-	return (int) (z1 * 1000.0 - z2 * 1000.0);
+	return (int) ((img->w * z - img->w * (img->zoom * img->wmul)) + (img->h * z - img->h * (img->zoom * img->hmul)));
 }
 
 void img_update_colormodifiers_current(img_t *);
@@ -404,8 +404,7 @@ bool img_need_trans(img_t *img)
 void img_check_pan(img_t *img, bool moved)
 {
 	win_t *win;
-	int ox, oy;
-	float w, h;
+	float w, h, ox, oy;
 
 	if (img == NULL || img->im == NULL || img->win == NULL)
 		return;
@@ -503,12 +502,11 @@ void img_update_antialias(img_t *img)
 
 bool img_fit(img_t *img)
 {
-	float z, zmax, zw, zh;
+	float z, zw, zh;
 
 	if (img->scalemode == SCALE_ZOOM)
 		return false;
 
-	zmax = img->scalemode == SCALE_DOWN ? 1.0 : zoom_max;
 	zw = (float) img->win->w / (float) img->w;
 	zh = (float) img->win->h / (float) img->h;
 	// minimum 3x3 tiles for fit in tiled mode
@@ -529,6 +527,7 @@ bool img_fit(img_t *img)
 			z = MIN(zw, zh);
 			break;
 	}
+	z = MIN(z, img->scalemode == SCALE_DOWN ? 1.0 : zoom_max);
 
         if (img->scalemode != SCALE_DISTORT) {
 		z = MAX(z, zoom_min);
@@ -537,8 +536,7 @@ bool img_fit(img_t *img)
 		z = MAX(0.0001, z);
 	}
 
-        // XXX won't correctly update for only-y changes
-	if (zoomdiff(z, img->zoom) != 0) {
+	if (zoomdiff(img, z) != 0) {
 		img->zoom = z;
 		img->yzoom = z;
 		if (img->scalemode == SCALE_DISTORT)
@@ -1109,9 +1107,7 @@ bool img_zoom(img_t *img, float z)
 
 	img->scalemode = SCALE_ZOOM;
 
-	if (zoomdiff(z, img->zoom) != 0) {
-//		img->x = img->win->w / 2 - (img->win->w / 2 - img->x) * z / (img->zoom * img->wmul);
-//		img->y = img->win->h / 2 - (img->win->h / 2 - img->y) * z / (img->yzoom * img->hmul);
+	if (zoomdiff(img, z) != 0) {
 		int x, y;
 
 		win_cursor_pos(img->win, &x, &y);
@@ -1137,9 +1133,9 @@ bool img_zoom_in(img_t *img, int amount)
 	int i;
 	float z;
 
-	for (i = 1; i < ARRLEN(zoom_levels); i++) {
+	for (i = 0; i < ARRLEN(zoom_levels); i++) {
 		z = zoom_levels[i] / 100.0;
-		if (zoomdiff(z, img->zoom) > 0)
+		if (zoomdiff(img, z) > 0)
 			amount -= 1;
                 if (amount == 0)
 			return img_zoom(img, z);
@@ -1152,9 +1148,9 @@ bool img_zoom_out(img_t *img, int amount)
 	int i;
 	float z;
 
-	for (i = ARRLEN(zoom_levels) - 2; i >= 0; i--) {
+	for (i = ARRLEN(zoom_levels) - 1; i >= 0; i--) {
 		z = zoom_levels[i] / 100.0;
-		if (zoomdiff(z, img->zoom) < 0)
+		if (zoomdiff(img, z) < 0)
                         amount -= 1;
                 if (amount == 0)
 			return img_zoom(img, z);
@@ -1217,7 +1213,7 @@ bool img_pan(img_t *img, direction_t dir, int d)
 
 bool img_pan_edge(img_t *img, direction_t dir)
 {
-	int ox, oy;
+	float ox, oy;
 
 	ox = img->x;
 	oy = img->y;
@@ -1243,7 +1239,8 @@ bool img_pan_edge(img_t *img, direction_t dir)
 
 void img_rotate(img_t *img, degree_t d)
 {
-	int i, ox, oy, tmp;
+	int i, tmp;
+	float ox, oy;
 
 	imlib_context_set_image(img->im);
 	imlib_image_orientate(d);

@@ -95,6 +95,11 @@ typedef enum {
 } scalemode_t;
 
 typedef enum {
+	DRAG_RELATIVE,
+	DRAG_ABSOLUTE
+} dragmode_t;
+
+typedef enum {
 	CURSOR_ARROW,
 	CURSOR_DRAG,
 	CURSOR_WATCH,
