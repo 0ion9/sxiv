@@ -78,7 +78,7 @@ struct {
   extcmd_t f;
   int fd;
   unsigned int i, lastsep;
-  bool open;
+  pid_t pid;
 } info;
 
 struct {
@@ -542,24 +542,26 @@ bool check_timeouts(struct timeval *t)
 	return tmin > 0;
 }
 
+void close_info(void)
+{
+	if (info.fd != -1) {
+		kill(info.pid, SIGTERM);
+		close(info.fd);
+		info.fd = -1;
+	}
+}
+
 void open_info(void)
 {
-	static pid_t pid;
 	int pfd[2];
 	char w[12], h[12];
 
-	if (info.f.err != 0 || info.open || win.bar.h == 0)
+	if (info.f.err != 0 || info.fd >= 0 || win.bar.h == 0)
 		return;
-	if (info.fd != -1) {
-		close(info.fd);
-		kill(pid, SIGTERM);
-		info.fd = -1;
-	}
 	win.bar.l.buf[0] = '\0';
-
 	if (pipe(pfd) < 0)
 		return;
-	if ((pid = fork()) == 0) {
+	if ((info.pid = fork()) == 0) {
 		close(pfd[0]);
 		dup2(pfd[1], 1);
 		snprintf(w, sizeof(w), "%d", img.w);
@@ -568,13 +570,12 @@ void open_info(void)
 		error(EXIT_FAILURE, errno, "exec: %s", info.f.cmd);
 	}
 	close(pfd[1]);
-	if (pid < 0) {
+	if (info.pid < 0) {
 		close(pfd[0]);
 	} else {
 		fcntl(pfd[0], F_SETFL, O_NONBLOCK);
 		info.fd = pfd[0];
 		info.i = info.lastsep = 0;
-		info.open = true;
 	}
 }
 
@@ -607,9 +608,7 @@ end:
 	info.i -= info.lastsep;
 	win.bar.l.buf[info.i] = '\0';
 	win_draw(&win);
-	close(info.fd);
-	info.fd = -1;
-	while (waitpid(-1, NULL, WNOHANG) > 0);
+	close_info();
 }
 
 void load_image(int new)
@@ -638,7 +637,7 @@ void load_image(int new)
 	files[new].flags &= ~FF_WARN;
 	fileidx = current = new;
 
-	info.open = false;
+	close_info();
 	open_info();
 	arl_setup(&arl, files[fileidx].path);
 
@@ -827,7 +826,7 @@ void run_key_handler(const char *key, unsigned int mask)
 	FILE *pfs;
 	bool marked = mode == MODE_THUMB && markcnt > 0;
 	bool changed = false;
-	int f, i, pfd[2], status;
+	int f, i, pfd[2];
 	int fcnt = marked ? markcnt : 1;
 	char kstr[32], oldbar[BAR_L_LEN];
 	struct stat *oldst, st;
@@ -854,6 +853,7 @@ void run_key_handler(const char *key, unsigned int mask)
 	}
 	oldst = emalloc(fcnt * sizeof(*oldst));
 
+        close_info();
 	memcpy(oldbar, win.bar.l.buf, sizeof(oldbar));
 	snprintf(win.bar.l.buf, win.bar.l.size, "[KeyHandling..] %s", oldbar);
 	win_draw(&win);
@@ -885,9 +885,7 @@ void run_key_handler(const char *key, unsigned int mask)
 		}
 	}
 	fclose(pfs);
-	waitpid(pid, &status, 0);
-	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
-		error(0, 0, "%s: Exited abnormally", keyhandler.f.cmd);
+	while (waitpid(pid, NULL, 0) == -1 && errno == EINTR);
 
 	for (f = i = 0; f < fcnt; i++) {
 		if ((marked && (files[i].flags & FF_MARK)) || (!marked && i == fileidx)) {
@@ -911,8 +909,7 @@ end:
 		if (changed) {
 			img_close(&img, true);
 			load_image(fileidx);
-		} else if (info.f.err == 0) {
-			info.open = false;
+		} else {
 			open_info();
 		}
 	}
@@ -1090,6 +1087,7 @@ void run(void)
 					if (arl_handle(&arl)) {
 						/* when too fast, imlib2 can't load the image */
 						nanosleep(&ten_ms, NULL);
+						img_close(&img, true);
 						load_image(fileidx);
 						redraw();
 					}
@@ -1168,6 +1166,22 @@ int fncmp(const void *a, const void *b)
 	return strcoll(((fileinfo_t*) a)->name, ((fileinfo_t*) b)->name);
 }
 
+void sigchld(int sig)
+{
+	while (waitpid(-1, NULL, WNOHANG) > 0);
+}
+
+void setup_signal(int sig, void (*handler)(int sig))
+{
+	struct sigaction sa;
+
+	sa.sa_handler = handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+	if (sigaction(sig, &sa, 0) == -1)
+		error(EXIT_FAILURE, errno, "signal %d", sig);
+}
+
 int main(int argc, char **argv)
 {
 	int i, start;
@@ -1178,7 +1192,8 @@ int main(int argc, char **argv)
 	struct stat fstats;
 	r_dir_t dir;
 
-	signal(SIGPIPE, SIG_IGN);
+	setup_signal(SIGCHLD, sigchld);
+	setup_signal(SIGPIPE, SIG_IGN);
 
 	setlocale(LC_COLLATE, "");
 
