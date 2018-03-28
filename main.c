@@ -233,23 +233,215 @@ void shift_marked_files_to(int index)
 	mix_arrays((unsigned char *)thumbbuf1, (unsigned char *)thumbbuf2, (unsigned char *)tns.thumbs, sizeof(thumb_t), index, markcnt, filecnt - index, filecnt);
 }
 
-void shift_marked_files_to2(int index) {
-	int bufindex;
+// Copy elements from src into dest.
+// src,dest,and indices must have an equal number of elements.
+static void array_take(unsigned char *dest, unsigned char *src, int *indices, size_t elementsize,
+size_t nelements) {
+        size_t i;
+	unsigned int from;
+	for (i=0; i<nelements; i++){
+		from = *(indices+i);
+		memcpy(dest+(elementsize*i),src+(elementsize*from),elementsize);
+	}
+}
+
+static int empty_indices_after(int *indices, int start, int nelements) {
 	int i;
-        int marked_copycount;
-        int unmarked_copycount;
+	int count=0;
+	if ((start > nelements) || (start < 0)) {
+		fprintf(stderr,
+			"sxiv:empty_indices_before: start %d beyond array bounds (%d elements)\n",
+			start, nelements);
+		return -1;
+	}
+
+	for (i=start+1; i<nelements; i++){
+		if (indices[i] < 0)
+			count+=1;
+	}
+	return count;
+}
+
+static int empty_indices_before(int *indices, int start, int nelements) {
+	int i;
+	int count=0;
+
+	if ((start > nelements) || (start < 0)) {
+		fprintf(stderr,
+			"sxiv:empty_indices_before: start %d beyond array bounds (%d elements)\n",
+			start, nelements);
+		return -1;
+	}
+
+	for (i=start-1; i>-1; i--){
+		if (indices[i] < 0)
+			count+=1;
+	}
+	return count;
+}
+
+static int next_free_index(int *indices, int start, int nelements) {
+	int i;
+
+	if ((start > nelements) || (start < 0)) {
+		fprintf(stderr,
+			"sxiv:next_free_index: start %d beyond array bounds (%d elements)\n",
+			start, nelements);
+		return -1;
+	}
+
+	for (i=start; i<nelements; i++){
+		if (indices[i] < 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static int prev_free_index(int *indices, int start, int nelements) {
+	int i;
+
+	if ((start > nelements) || (start < 0)) {
+		fprintf(stderr,
+			"sxiv:prev_free_index: start %d beyond array bounds (%d elements)\n",
+			start, nelements);
+		return -1;
+	}
+
+	for (i=start; i>-1; i--){
+		if (indices[i] < 0)
+			return i;
+	}
+
+	return -1;
+}
+
+void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_destindex) {
+	int bufindex;
+	int *indices = NULL;
+	int i;
+	int ncopy = markcnt;
+	int count;
+	int new_fileidx, new_alternate;
+
+	indices = (int *) emalloc((sizeof(int) * filecnt));
+	for (i=0;i<filecnt;i++) {
+		indices[i] = -1;
+	}
+
+	fprintf(stderr,
+		"sxiv:smft: start index %d, direction %d\n",
+		index, direction);
+
+	if ((fix_srcindex > -1) && (fix_destindex > -1)) {
+		if ((fix_srcindex >= filecnt) || (fix_destindex) >= filecnt) {
+			fprintf(stderr,
+				"sxiv:smft: fixation %d->%d : beyond array size (%d elements)\n",
+				fix_srcindex, fix_destindex, filecnt);
+			return;
+		}
+		fprintf(stderr,
+			"sxiv:smft: fixation %d->%d\n",
+			fix_srcindex, fix_destindex);
+		indices[fix_destindex] = fix_srcindex;
+		if ((files+fix_srcindex)->flags & FF_MARK)
+			ncopy--;
+	}
 
 	if (index < 0)
 		index = 0;
 	if (index >= filecnt)
 		index = filecnt-1;
-	bufindex = index;
-	// adjust destination left so that enough slots will be available
-        while ((bufindex + markcnt) > filecnt)
-		bufindex--;
-	fprintf(stderr,
-		"sxiv:smft: start at index %d.\n",
-		bufindex);
+	if (direction > 0) {
+		count = empty_indices_after(indices,index,filecnt);
+		if (count < ncopy) {
+			fprintf(stderr,
+				"sxiv:smft: Not enough space after #%d for %d items (%d available)\n",
+				index, ncopy, count);
+			return;
+		}
+		bufindex = next_free_index(indices, index, filecnt);
+		fprintf(stderr,
+			"sxiv:smft:RIGHT: next free index after %d == %d\n",
+			index, bufindex);
+	} else {
+		count = empty_indices_before(indices,index,filecnt);
+		if (count < ncopy) {
+			fprintf(stderr,
+				"sxiv:smft: Not enough space before #%d for %d items (%d available)\n",
+				index, ncopy, count);
+			return;
+		}
+		bufindex=index;
+		for (i=0;i<markcnt;i++) {
+			bufindex = prev_free_index(indices, bufindex-1, filecnt);
+		}
+		fprintf(stderr,
+			"sxiv:smft:LEFT: prev free index*%d before %d == %d\n",
+			count, index, bufindex);
+	}
+
+	if (bufindex == -1) {
+		fprintf(stderr,
+			"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded (ERROR).\n",
+			filecnt);
+		free(indices);
+		return;
+	}
+
+	// position marked files
+
+	for (i=0; i<filecnt; i++){
+		if (i == fix_srcindex)
+			continue;
+		if (((files + i)->flags & FF_MARK)){
+			if (bufindex == -1) {
+				fprintf(stderr,
+					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
+					filecnt);
+				free(indices);
+				return;
+			}
+			fprintf(stderr,
+				"sxiv:smft:p1:FILES[%d]* -> BUF[%d]\n",
+				i, bufindex);
+			indices[bufindex] = i;
+			bufindex = next_free_index(indices, bufindex, filecnt);
+		}
+	}
+
+	bufindex = next_free_index(indices, 0, filecnt);
+
+	// position other files
+
+	for (i=0; i<filecnt; i++){
+		if (i == fix_srcindex)
+			continue;
+		if (((files + i)->flags & FF_MARK) == 0){
+			if (bufindex == -1) {
+				fprintf(stderr,
+					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
+					filecnt);
+				free(indices);
+				return;
+			}
+			fprintf(stderr,
+				"sxiv:smft:p2:FILES[%d]* -> BUF[%d]\n",
+				i, bufindex);
+			indices[bufindex] = i;
+			bufindex = next_free_index(indices, bufindex, filecnt);
+		}
+	}
+
+	// determine new values of fileidx and alternate
+	for (i=0; i<filecnt; i++){
+		if (indices[i] == alternate)
+			new_alternate = i;
+		if (indices[i] == fileidx)
+			new_fileidx = i;
+	}
+
+	// fill buffers
 
 	if (buf1_size < filecnt) {
 		if (infobuf1 != NULL)
@@ -264,67 +456,24 @@ void shift_marked_files_to2(int index) {
 		thumbbuf1 = (thumb_t *) emalloc(sizeof(thumb_t) * buf1_size);
 
 	}
-	// initialize with 'slot is empty' placeholder values
-	for (i=0; i<buf1_size; i++){
-		(infobuf1 + i)->path=NULL;
-		(thumbbuf1 + i)->w=-1024;
-	}
-	memcpy(infobuf1 + fileidx, files + fileidx, sizeof(fileinfo_t));
-	memcpy(thumbbuf1 + fileidx, tns.thumbs + fileidx, sizeof(thumb_t));
-	fprintf(stderr,
-		"sxiv:smft: pass 1 - marked. markcnt = %d.\n",
-		markcnt);
-	for (i=0; i<filecnt; i++){
-		if (((files + i)->flags & FF_MARK)){
-			fprintf(stderr,
-				"sxiv:smft:p1:FILES[%d]* -> BUF[%d]\n",
-				i, bufindex);
-			memcpy(infobuf1 + bufindex, files + i, sizeof(fileinfo_t));
-			memcpy(thumbbuf1 + bufindex, tns.thumbs + i, sizeof(thumb_t));
-			bufindex++;
-			if (bufindex >= filecnt)
-				fprintf(stderr,
-					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
-					filecnt);
-		}
-	}
-	bufindex = 0;
-	for (i=0; i<filecnt; i++){
-		if ((((files + i)->flags & FF_MARK) == 0) && (i != fileidx)){
-			fprintf(stderr,
-				"sxiv:smft:p2:bufindex %d ->",
-				bufindex);
-			while ((thumbbuf1+bufindex)->w != -1024) {
-				bufindex++;
-				if (bufindex >= filecnt) {
-					fprintf(stderr,
-						"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
-						filecnt);
-					break;
-				}
-			}
-			fprintf(stderr,
-				"%d\n",
-				bufindex);
-			fprintf(stderr,
-				"sxiv:smft:p2:FILES[%d]  -> BUF[%d]\n",
-				i, bufindex);
-			memcpy(infobuf1 + bufindex, files + i, sizeof(fileinfo_t));
-			memcpy(thumbbuf1 + bufindex, tns.thumbs + i, sizeof(thumb_t));
-			bufindex++;
-			if (bufindex >= filecnt)
-				fprintf(stderr,
-					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
-					filecnt);
-			// if (bufindex >= filecnt) warn("buffer boundary exceeded");
-		}
-	}
+
+	array_take((unsigned char *)infobuf1, (unsigned char *)files, indices, sizeof(fileinfo_t), filecnt);
+	array_take((unsigned char *)thumbbuf1, (unsigned char *)tns.thumbs, indices, sizeof(thumb_t), filecnt);
+
+        // transfer buffers
+
 	memcpy (files, infobuf1, sizeof(fileinfo_t) * filecnt);
 	memcpy (tns.thumbs, thumbbuf1, sizeof(fileinfo_t) * filecnt);
 
+	// teleport
+	alternate = new_alternate;
+	fileidx = new_fileidx;
+
+	free (indices);
+
 }
 
-
+// XXX should be able to simply wrap shift_marked_files_to2 instead of this detail work.
 void shift_marked_files(int direction)
 {
 	// shift marked files to either the start (-1) or end (1) of the list.

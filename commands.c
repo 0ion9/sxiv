@@ -30,7 +30,7 @@
 void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
-void shift_marked_files_to2(int);
+void shift_marked_files_to2(int, int, int, int);
 void remove_file(int, bool);
 void clone_file(int);
 void load_image(int);
@@ -245,12 +245,18 @@ bool cg_reorder_marked_images(arg_t _dir)
 static bool _reorder_marked_images_to(arg_t a, int where)
 {
 	long n = (long)a;
-	long finaldest = where + (n * markcnt);
-	if (n > 0)
-		finaldest--;
-	shift_marked_files_to2(finaldest);
-        if (where == alternate)
-		alternate += n;
+	long final_fileidx = fileidx;
+	// try to preserve position of current file,
+	// but leave minimum space for insertion of marked files
+	if (n > 0) {
+		final_fileidx = MIN(fileidx, filecnt-(markcnt+1));
+	} else if (n < 0) {
+		final_fileidx = MAX(fileidx, markcnt);
+	}
+// int index, int direction, int fix_srcindex, int fix_destindex
+	if (where == fileidx)
+		where = final_fileidx;
+	shift_marked_files_to2(where, n, fileidx, final_fileidx);
 	tns.dirty = true;
 /*
 	long n = (long)a;
