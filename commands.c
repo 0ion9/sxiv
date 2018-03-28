@@ -27,6 +27,8 @@
 
 /* XXX where does the code from old void cleanup(void) go? */
 
+bool img_frame_goto(img_t *, int);
+
 void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
@@ -463,9 +465,18 @@ bool ci_alternate(arg_t _)
 
 bool ci_navigate_frame(arg_t d)
 {
+	int frame;
 	if (prefix > 0)
 		d *= prefix;
-	return img_frame_navigate(&img, d);
+
+	if (img.multi.cnt > 0) {
+		frame = (img.multi.sel + d) % img.multi.cnt;
+		while (frame < 0)
+			frame += img.multi.cnt;
+		return img_frame_goto(&img,frame);
+	} else {
+		return img_frame_navigate(&img, d);
+	}
 }
 
 bool ci_toggle_animation(arg_t _)
