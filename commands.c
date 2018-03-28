@@ -30,6 +30,7 @@
 void swap_files(int, int);
 void shift_file(int, int);
 void shift_marked_files(int);
+void shift_marked_files_to2(int);
 void remove_file(int, bool);
 void clone_file(int);
 void load_image(int);
@@ -162,24 +163,39 @@ bool cg_remove_image(arg_t _)
 }
 
 
-bool cg_reorder_image_to_alternate(arg_t a)
+static bool _reorder_image_to(arg_t a, int where)
 {
 	long n = (long)a;
 	if (n > 0) {
 		// insert in slot immediately following alternate location (ALT*9876543210...)
-		n = ((alternate + 1) - fileidx) ;
+		n = ((where + 1) - fileidx) ;
 		shift_file(fileidx, n);
-		if (fileidx < alternate)
+		if ((fileidx < alternate) && (where == alternate)) {
 			alternate--;
+			where--;
+		}
 	} else {
 		// insert in slot immediately preceding alternate location (...0123456789*ALT)
-		n = (alternate - fileidx);
+		n = (where - fileidx);
 		shift_file(fileidx, n);
-		if (fileidx > alternate)
+		if ((fileidx > alternate) && (where == alternate)) {
 			alternate++;
+			where++;
+		}
 	}
 	tns.dirty = true;
 	return true;
+}
+
+bool cg_reorder_image_to_alternate(arg_t a)
+{
+	return _reorder_image_to(a, alternate);
+}
+
+// XXX pointless
+bool cg_reorder_image_to_current(arg_t a)
+{
+	return _reorder_image_to(a, fileidx);
 }
 
 bool cg_reorder_image(arg_t a)
@@ -225,14 +241,27 @@ bool cg_reorder_marked_images(arg_t _dir)
 	return true;
 }
 
-bool cg_reorder_marked_images_to_alternate(arg_t a)
+
+static bool _reorder_marked_images_to(arg_t a, int where)
 {
+	long n = (long)a;
+	long finaldest = where + (n * markcnt);
+	if (n > 0)
+		finaldest--;
+	shift_marked_files_to2(finaldest);
+        if (where == alternate)
+		alternate += n;
+	tns.dirty = true;
+/*
 	long n = (long)a;
 	int i;
 	int saved_fileidx;
 
 	if (markcnt == 0) {
-		cg_reorder_image_to_alternate(a);
+		if (where == alternate)
+			cg_reorder_image_to_alternate(a);
+		else
+			cg_reorder_image_to_current(a);
 		return true;
 	}
 
@@ -251,14 +280,29 @@ bool cg_reorder_marked_images_to_alternate(arg_t a)
 	for (i = 0; i < filecnt; i++) {
 		if (files[i].flags & FF_MARK) {
 			fileidx=i;
-			cg_reorder_image_to_alternate(n);
+			if (where == alternate)
+				cg_reorder_image_to_alternate(a);
+			else
+				cg_reorder_image_to_current(a);
 		}
 	}
 	// still, it makes for a good clear factorization.
 	fileidx = saved_fileidx;
+*/
 	return true;
 }
 
+bool cg_reorder_marked_images_to_alternate(arg_t a)
+{
+	_reorder_marked_images_to(a, alternate);
+	return (markcnt > 0 ? true : false);
+}
+
+bool cg_reorder_marked_images_to_current(arg_t a)
+{
+	_reorder_marked_images_to(a, fileidx);
+	return (markcnt > 0 ? true : false);
+}
 
 bool cg_first(arg_t _)
 {

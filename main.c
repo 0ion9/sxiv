@@ -191,7 +191,7 @@ void shift_marked_files_to(int index)
 	if ((buf1_size == 0) || (infobuf1 == NULL) || (thumbbuf1 == NULL) || (buf1_size < (filecnt - markcnt)))
 	{
 		if (infobuf1 != NULL)
-  	  	  	free(infobuf1);
+			free(infobuf1);
 		if (thumbbuf1 != NULL)
 			free(thumbbuf1);
 		buf1_size = (filecnt - markcnt);
@@ -232,6 +232,98 @@ void shift_marked_files_to(int index)
 	mix_arrays((unsigned char *)infobuf1, (unsigned char *)infobuf2, (unsigned char *)files, sizeof(fileinfo_t), index, markcnt, filecnt - index, filecnt);
 	mix_arrays((unsigned char *)thumbbuf1, (unsigned char *)thumbbuf2, (unsigned char *)tns.thumbs, sizeof(thumb_t), index, markcnt, filecnt - index, filecnt);
 }
+
+void shift_marked_files_to2(int index) {
+	int bufindex;
+	int i;
+        int marked_copycount;
+        int unmarked_copycount;
+
+	if (index < 0)
+		index = 0;
+	if (index >= filecnt)
+		index = filecnt-1;
+	bufindex = index;
+	// adjust destination left so that enough slots will be available
+        while ((bufindex + markcnt) > filecnt)
+		bufindex--;
+	fprintf(stderr,
+		"sxiv:smft: start at index %d.\n",
+		bufindex);
+
+	if (buf1_size < filecnt) {
+		if (infobuf1 != NULL)
+			free(infobuf1);
+		if (thumbbuf1 != NULL)
+			free(thumbbuf1);
+		fprintf(stderr,
+			"sxiv:smft: allocate %d buffer entries.\n",
+			filecnt);
+		buf1_size = filecnt;
+		infobuf1 = (fileinfo_t *) emalloc(sizeof(fileinfo_t) * buf1_size);
+		thumbbuf1 = (thumb_t *) emalloc(sizeof(thumb_t) * buf1_size);
+
+	}
+	// initialize with 'slot is empty' placeholder values
+	for (i=0; i<buf1_size; i++){
+		(infobuf1 + i)->path=NULL;
+		(thumbbuf1 + i)->w=-1024;
+	}
+	memcpy(infobuf1 + fileidx, files + fileidx, sizeof(fileinfo_t));
+	memcpy(thumbbuf1 + fileidx, tns.thumbs + fileidx, sizeof(thumb_t));
+	fprintf(stderr,
+		"sxiv:smft: pass 1 - marked. markcnt = %d.\n",
+		markcnt);
+	for (i=0; i<filecnt; i++){
+		if (((files + i)->flags & FF_MARK)){
+			fprintf(stderr,
+				"sxiv:smft:p1:FILES[%d]* -> BUF[%d]\n",
+				i, bufindex);
+			memcpy(infobuf1 + bufindex, files + i, sizeof(fileinfo_t));
+			memcpy(thumbbuf1 + bufindex, tns.thumbs + i, sizeof(thumb_t));
+			bufindex++;
+			if (bufindex >= filecnt)
+				fprintf(stderr,
+					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
+					filecnt);
+		}
+	}
+	bufindex = 0;
+	for (i=0; i<filecnt; i++){
+		if ((((files + i)->flags & FF_MARK) == 0) && (i != fileidx)){
+			fprintf(stderr,
+				"sxiv:smft:p2:bufindex %d ->",
+				bufindex);
+			while ((thumbbuf1+bufindex)->w != -1024) {
+				bufindex++;
+				if (bufindex >= filecnt) {
+					fprintf(stderr,
+						"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
+						filecnt);
+					break;
+				}
+			}
+			fprintf(stderr,
+				"%d\n",
+				bufindex);
+			fprintf(stderr,
+				"sxiv:smft:p2:FILES[%d]  -> BUF[%d]\n",
+				i, bufindex);
+			memcpy(infobuf1 + bufindex, files + i, sizeof(fileinfo_t));
+			memcpy(thumbbuf1 + bufindex, tns.thumbs + i, sizeof(thumb_t));
+			bufindex++;
+			if (bufindex >= filecnt)
+				fprintf(stderr,
+					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
+					filecnt);
+			// if (bufindex >= filecnt) warn("buffer boundary exceeded");
+		}
+	}
+	memcpy (files, infobuf1, sizeof(fileinfo_t) * filecnt);
+	memcpy (tns.thumbs, thumbbuf1, sizeof(fileinfo_t) * filecnt);
+
+}
+
 
 void shift_marked_files(int direction)
 {
@@ -449,7 +541,7 @@ void clone_file(int n)
 		newthumb = (thumb_t *) emalloc(sizeof(*oldthumb) * (filecnt + 1));
 	// reallocate memory (files, tns)
 	// copy the segment at start as-is
-	fprintf(stderr, "sxiv: thumbsize = %d; allthumbs= %d\n", sizeof(*oldthumb), sizeof(*oldthumb) * (filecnt + 1));
+	fprintf(stderr, "sxiv: thumbsize = %ld; allthumbs= %ld\n", sizeof(*oldthumb), sizeof(*oldthumb) * (filecnt + 1));
 	memcpy(newinfo, oldinfo, (n+1) * sizeof(*oldinfo));
 	if (oldthumb != NULL)
 		memcpy(newthumb, oldthumb, (n+1) * sizeof(*oldthumb));
