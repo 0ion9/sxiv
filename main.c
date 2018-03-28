@@ -102,6 +102,7 @@ int buf1_size = 0;
 fileinfo_t *infobuf2 = NULL;
 thumb_t *thumbbuf2 = NULL;
 int buf2_size = 0;
+int *index_array = NULL;
 
 cursor_t imgcursor[3] = {
 	CURSOR_ARROW, CURSOR_ARROW, CURSOR_ARROW
@@ -122,6 +123,8 @@ void cleanup(void)
 		free(thumbbuf1);
 	if (thumbbuf2 != NULL)
 		free(thumbbuf2);
+	if (index_array != NULL)
+		free(index_array);
 }
 
 void check_add_file(char *filename, bool given)
@@ -318,13 +321,33 @@ static int prev_free_index(int *indices, int start, int nelements) {
 
 void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_destindex) {
 	int bufindex;
-	int *indices = NULL;
+	int *indices;
 	int i;
 	int ncopy = markcnt;
 	int count;
 	int new_fileidx, new_alternate;
 
-	indices = (int *) emalloc((sizeof(int) * filecnt));
+	if (buf1_size != filecnt) {
+		if (index_array != NULL)
+			free(index_array);
+		if (infobuf1 != NULL)
+			free(infobuf1);
+		if (thumbbuf1 != NULL)
+			free(thumbbuf1);
+		index_array = NULL;
+	}
+
+	if (index_array == NULL) {
+		index_array = (int *) emalloc((sizeof(int) * filecnt));
+		fprintf(stderr,
+			"sxiv:smft: allocate %d buffer entries.\n",
+			filecnt);
+		buf1_size = filecnt;
+		infobuf1 = (fileinfo_t *) emalloc(sizeof(fileinfo_t) * buf1_size);
+		thumbbuf1 = (thumb_t *) emalloc(sizeof(thumb_t) * buf1_size);
+	}
+
+	indices = index_array;
 	for (i=0;i<filecnt;i++) {
 		indices[i] = -1;
 	}
@@ -385,7 +408,6 @@ void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_
 		fprintf(stderr,
 			"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded (ERROR).\n",
 			filecnt);
-		free(indices);
 		return;
 	}
 
@@ -399,7 +421,6 @@ void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_
 				fprintf(stderr,
 					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
 					filecnt);
-				free(indices);
 				return;
 			}
 			fprintf(stderr,
@@ -422,12 +443,11 @@ void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_
 				fprintf(stderr,
 					"sxiv:shift_marked_files_to: buffer boundary (%d files) exceeded.\n",
 					filecnt);
-				free(indices);
 				return;
 			}
-			fprintf(stderr,
+/*			fprintf(stderr,
 				"sxiv:smft:p2:FILES[%d]* -> BUF[%d]\n",
-				i, bufindex);
+				i, bufindex);*/
 			indices[bufindex] = i;
 			bufindex = next_free_index(indices, bufindex, filecnt);
 		}
@@ -443,20 +463,6 @@ void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_
 
 	// fill buffers
 
-	if (buf1_size < filecnt) {
-		if (infobuf1 != NULL)
-			free(infobuf1);
-		if (thumbbuf1 != NULL)
-			free(thumbbuf1);
-		fprintf(stderr,
-			"sxiv:smft: allocate %d buffer entries.\n",
-			filecnt);
-		buf1_size = filecnt;
-		infobuf1 = (fileinfo_t *) emalloc(sizeof(fileinfo_t) * buf1_size);
-		thumbbuf1 = (thumb_t *) emalloc(sizeof(thumb_t) * buf1_size);
-
-	}
-
 	array_take((unsigned char *)infobuf1, (unsigned char *)files, indices, sizeof(fileinfo_t), filecnt);
 	array_take((unsigned char *)thumbbuf1, (unsigned char *)tns.thumbs, indices, sizeof(thumb_t), filecnt);
 
@@ -468,9 +474,6 @@ void shift_marked_files_to2(int index, int direction, int fix_srcindex, int fix_
 	// teleport
 	alternate = new_alternate;
 	fileidx = new_fileidx;
-
-	free (indices);
-
 }
 
 // XXX should be able to simply wrap shift_marked_files_to2 instead of this detail work.
