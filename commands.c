@@ -154,6 +154,24 @@ bool cg_clone_image(arg_t n)
 	return true;
 }
 
+bool cg_insert_from_clipboard(arg_t _)
+{
+	/* Stubbed */
+	/* Will depend on xsel. Obtain data via "xsel -ob".
+           There is probably an XLib way of doing this, but I don't know it yet.
+
+	   1. Get list of files to insert
+           2. Insert [file in files if file exists]
+           3. Dirty thumbs
+
+	   Should return true unless there are no valid, existing filenames in the list.
+
+	   Absolute filenames are strongly preferable, unless you happen to know the working
+           directory of the particular sxiv instance you are trying to paste into.
+	*/
+	return false;
+}
+
 bool cg_remove_image(arg_t _)
 {
 	remove_file(fileidx, true);

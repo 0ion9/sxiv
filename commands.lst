@@ -23,6 +23,7 @@ G_CMD(cycle_silhouetting)
 G_CMD(cycle_opacity)
 G_CMD(toggle_negalpha)
 G_CMD(clone_image)
+G_CMD(insert_from_clipboard)
 
 I_CMD(navigate)
 I_CMD(cursor_navigate)
