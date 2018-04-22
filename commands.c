@@ -157,6 +157,47 @@ bool cg_clone_image(arg_t n)
 bool cg_insert_from_clipboard(arg_t _)
 {
 	/* Stubbed */
+	FILE *fp;
+	char path[2048];
+	char **pathlist;
+	char **tmp_pathlist;
+	int pathlist_size = 256;
+	int new_pathlist_size;
+	int npaths = 0;
+
+        fp = popen("xsel -ob", "r");
+	if (fp == NULL) {
+		fprintf(stderr, "Failed to execute xsel -ob");
+		return false;
+	}
+	
+	pathlist = emalloc(sizeof(char *) * pathlist_size);
+
+	while (fgets(path, sizeof(path), fp) != NULL)
+	{
+		if (strlen(path) == 0)
+			continue;
+		npaths += 1;
+		if (npaths > pathlist_size) {
+			new_pathlist_size = MIN(pathlist_size * 2, 65536);
+			if (new_pathlist_size == pathlist_size) {
+				fprintf(stderr, "Bailout after hitting 65536 filelist entries");
+				free(pathlist);
+				return false;	
+			}
+			tmp_pathlist = emalloc(sizeof(char *) * new_pathlist_size);
+			memcpy(tmp_pathlist, pathlist, sizeof(char *) * (npaths - 1));
+			free(pathlist);
+			pathlist = tmp_pathlist;
+		}
+		/* XXX check path exists and is not a directory */
+		*(pathlist + (npaths - 1)) = strdup(path);
+	}
+
+	insert_files(pathlist, npaths);
+	/* note -- this assumes insert_files will reuse the strings rather than allocating copies
+*/
+	free(pathlist);
 	/* Will depend on xsel. Obtain data via "xsel -ob".
            There is probably an XLib way of doing this, but I don't know it yet.
 
