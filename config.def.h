@@ -236,6 +236,7 @@ static const keymap_t keys[] = {
         { 0,            XK_B,             g_toggle_bar,         None },
         // k
 	{ 0,            XK_m,             g_toggle_image_mark,  None },
+	{ AltMask,      XK_m,             g_mark_range,         None },
 	{ 0,            XK_m,             i_navigate,           +1 },
 	{ 0,            XK_m,             t_move_sel,           DIR_RIGHT },
 /* use C-Menu to do this instead, it's much easier */

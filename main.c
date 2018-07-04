@@ -62,6 +62,7 @@ fileinfo_t *files;
 int filecnt, fileidx;
 int alternate;
 int markcnt;
+int markidx;
 
 int prefix;
 bool extprefix;
@@ -649,6 +650,8 @@ void remove_file(int n, bool manual)
 		fileidx--;
 	if (n < alternate)
 		alternate--;
+	if (n < markidx)
+		markidx--;
 }
 
 #include <inttypes.h>
@@ -889,6 +892,19 @@ void load_image(int new)
 		set_timeout(animate, img.multi.frames[img.multi.sel].delay, true);
 	else
 		reset_timeout(animate);
+}
+
+bool mark_image(int n, bool on)
+{
+	markidx = n;
+	if (!!(files[n].flags & FF_MARK) != on) {
+		files[n].flags ^= FF_MARK;
+		markcnt += on ? 1 : -1;
+		if (mode == MODE_THUMB)
+			tns_mark(&tns, n, on);
+		return true;
+	}
+	return false;
 }
 
 void bar_put(win_bar_t *bar, const char *fmt, ...)
@@ -1265,10 +1281,19 @@ void on_buttonpress(XButtonEvent *bev)
 			case Button2:
 			case Button3:
 				if ((sel = tns_translate(&tns, bev->x, bev->y)) >= 0) {
-					files[sel].flags ^= FF_MARK;
-					markcnt += files[sel].flags & FF_MARK ? 1 : -1;
-					tns_mark(&tns, sel, !!(files[sel].flags & FF_MARK));
-					redraw();
+					bool on = !(files[sel].flags & FF_MARK);
+					XEvent e;
+
+					for (;;) {
+						if (sel >= 0 && mark_image(sel, on))
+							redraw();
+						XMaskEvent(win.env.dpy,
+						           ButtonPressMask | ButtonReleaseMask | PointerMotionMask, &e);
+						if (e.type == ButtonPress || e.type == ButtonRelease)
+							break;
+						while (XCheckTypedEvent(win.env.dpy, MotionNotify, &e));
+						sel = tns_translate(&tns, e.xbutton.x, e.xbutton.y);
+					}
 				}
 				break;
 			case Button4:
