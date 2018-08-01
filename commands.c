@@ -196,7 +196,8 @@ bool cg_insert_from_clipboard(arg_t _)
 		*(pathlist + (npaths - 1)) = strdup(path);
 	}
 
-	insert_files(pathlist, npaths);
+	/* STUBBED until insert_files is actually implemented *?
+//	insert_files(pathlist, npaths);
 	/* note -- this assumes insert_files will reuse the strings rather than allocating copies
 */
 	free(pathlist);
