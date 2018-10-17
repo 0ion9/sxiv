@@ -466,7 +466,7 @@ void win_set_title(win_t *win, const char *title)
 {
 	if (title == NULL)
 		title = "sxiv";
-
+	
 	XStoreName(win->env.dpy, win->xwin, title);
 	XSetIconName(win->env.dpy, win->xwin, title);
 
