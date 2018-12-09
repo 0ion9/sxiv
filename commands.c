@@ -226,6 +226,26 @@ bool cg_remove_image(arg_t _)
 	return true;
 }
 
+bool cg_remove_marked(arg_t _)
+{
+        int i;
+
+	for (i = 0; i < filecnt; i++) {
+		if (files[i].flags & FF_MARK) {
+                        remove_file(i, true);
+			i=0;
+			continue;
+                }
+	}
+	/* attempt to patch bug where 1 image remains (the first marked item */
+	if (markcnt > 0) {
+		cg_remove_marked(_);
+	}
+
+	if (mode != MODE_IMAGE)
+		tns.dirty = true;
+        return true;
+}
 
 static bool _reorder_image_to(arg_t a, int where)
 {

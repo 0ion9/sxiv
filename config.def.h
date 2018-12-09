@@ -184,6 +184,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_backslash,     i_flip,               FLIP_HORIZONTAL },
 	{ 0,            XK_exclamdown,    i_flip,               FLIP_HORIZONTAL },
 	{ 0,            XK_Delete,        g_remove_image,      None },
+	{ ControlMask,  XK_Delete,        g_remove_marked,      None },
         // End
         // PgDn
         // KP_AltMask
@@ -257,6 +258,7 @@ static const keymap_t keys[] = {
 
 
         { 0,            XK_space,         i_navigate,           +1 },
+        { 0,            XK_space,         t_move_sel,           DIR_DOWN },
 	{ ControlMask,  XK_space,         i_toggle_animation,   None },
 	{ 0,            XK_Menu,          g_toggle_image_mark, None },
 	{ 0,            XK_Menu,          i_navigate,           +1 },
