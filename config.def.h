@@ -237,6 +237,9 @@ static const keymap_t keys[] = {
         { 0,            XK_B,             g_toggle_bar,         None },
         // k
 	{ 0,            XK_m,             g_toggle_image_mark,  None },
+	{ 0,            XK_BackSpace,     g_toggle_image_mark,  None },
+	{ 0,            XK_BackSpace,     i_navigate,           +1 },
+	{ 0,            XK_BackSpace,     t_move_sel,           DIR_RIGHT },
 	{ AltMask,      XK_m,             g_mark_range,         None },
 	{ 0,            XK_m,             i_navigate,           +1 },
 	{ 0,            XK_m,             t_move_sel,           DIR_RIGHT },
@@ -259,6 +262,7 @@ static const keymap_t keys[] = {
 
         { 0,            XK_space,         i_navigate,           +1 },
         { 0,            XK_space,         t_move_sel,           DIR_DOWN },
+        { ShiftMask,    XK_space,         t_move_sel,           DIR_RIGHT },
 	{ ControlMask,  XK_space,         i_toggle_animation,   None },
 	{ 0,            XK_Menu,          g_toggle_image_mark, None },
 	{ 0,            XK_Menu,          i_navigate,           +1 },
