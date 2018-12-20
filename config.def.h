@@ -328,6 +328,10 @@ static const keymap_t keys[] = {
 
 	{ 0,            XK_KP_Insert,     g_navigate_marked,   -1 },
 	{ 0,            XK_KP_Delete,     g_navigate_marked,   +1 },
+	{ ShiftMask,    XK_KP_Insert,     g_navigate_marked,   -10 },
+	{ ShiftMask,    XK_KP_Delete,     g_navigate_marked,   +10 },
+	{ AltMask,      XK_KP_Insert,     g_navigate_marked,   -1000 },
+	{ AltMask,      XK_KP_Delete,     g_navigate_marked,   +1000 },
 
 //////
 	{ 0,            XK_KP_Next,       i_navigate,           -10 }
