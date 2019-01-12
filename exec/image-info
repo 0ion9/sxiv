@@ -7,6 +7,6 @@
 #   $2: image width
 #   $3: image height
 
-R=$(realpath "$1")
+f=${1##*/}
 exec 2>/dev/null
-echo $PPID$(tmsu tags -- "$R"|cut -d : -f 2-)
+echo "$f" $2.$3
