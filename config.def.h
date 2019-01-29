@@ -177,6 +177,10 @@ static const keymap_t keys[] = {
         // semicolon
 	{ 0,            XK_bracketleft,   i_navigate,           -10 },
         { 0,            XK_bracketright,  i_navigate,           +10 },
+	{ AltMask,      XK_bracketleft,   i_navigate,           -100 },
+        { AltMask,      XK_bracketright,  i_navigate,           +100 },
+        { 0,            XK_bracketleft,   g_scroll_screen,      DIR_UP },
+        { 0,            XK_bracketright,  g_scroll_screen,      DIR_DOWN },
 	{ 0,            XK_leftt,         i_navigate,           -10 },
 	{ 0,            XK_rightt,        i_navigate,           +10 },
 	{ 0,            XK_braceleft,     g_change_gamma,       -1 },
@@ -328,8 +332,8 @@ static const keymap_t keys[] = {
 
 	{ 0,            XK_KP_Insert,     g_navigate_marked,   -1 },
 	{ 0,            XK_KP_Delete,     g_navigate_marked,   +1 },
-	{ ShiftMask,    XK_KP_Insert,     g_navigate_marked,   -10 },
-	{ ShiftMask,    XK_KP_Delete,     g_navigate_marked,   +10 },
+	{ 0,    XK_KP_Decimal,     g_navigate_marked,   -10 },
+	{ 0,    XK_KP_0,     g_navigate_marked,   +10 },
 	{ AltMask,      XK_KP_Insert,     g_navigate_marked,   -1000 },
 	{ AltMask,      XK_KP_Delete,     g_navigate_marked,   +1000 },
 
