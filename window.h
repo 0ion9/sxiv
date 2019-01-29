@@ -60,9 +60,10 @@ typedef struct {
 	Window xwin;
 	win_env_t env;
 
-	XftColor bgcol;
-	XftColor fscol;
-	XftColor selcol;
+	XftColor bg;
+	XftColor fg;
+	XftColor sel;
+	XftColor barcol;
 
 	int x;
 	int y;

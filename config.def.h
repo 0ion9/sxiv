@@ -14,13 +14,13 @@ enum {
 static const char * const BAR_FONT = "unifont:size=10";
 
 /* colors:
+ * overwritten by 'background', 'foreground', 'selection' X resource properties.
  * (see X(7) section "COLOR NAMES" for valid values)
  */
-static const char * const WIN_BG_COLOR = "#555555";
-static const char * const WIN_FS_COLOR = "#000000";
-static const char * const SEL_COLOR    = "#EEEEEE";
-static const char * const BAR_BG_COLOR = "#222222";
-static const char * const BAR_FG_COLOR = "#EEEEEE";
+static const char * const BG_COLOR = "#808080";
+static const char * const FG_COLOR = "#050300";
+static const char * const SEL_COLOR = "#66f0ff";
+static const char * const BAR_COLOR = "#707070";
 
 #endif
 #ifdef _IMAGE_CONFIG

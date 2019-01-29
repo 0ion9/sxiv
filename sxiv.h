@@ -444,9 +444,12 @@ struct win {
 	Window xwin;
 	win_env_t env;
 
-	XftColor bgcol;
-	XftColor fscol;
-	XftColor selcol;
+	bool light; /* bg is lighter than fg */
+	XftColor bg;
+	XftColor fg;
+	XftColor black;
+        XftColor sel;
+        XftColor barcol;
 
 	int x;
 	int y;
@@ -466,8 +469,6 @@ struct win {
 		unsigned int h;
 		win_bar_t l;
 		win_bar_t r;
-		XftColor bgcol;
-		XftColor fgcol;
 	} bar;
         
         struct {

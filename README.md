@@ -2,11 +2,10 @@
 
 **Simple X Image Viewer**
 
-The primary goal of sxiv is to create an image viewer, which only has the most
-basic features required for fast image viewing (the ones I want). It has vi key
-bindings and works nicely with tiling window managers.  Its code base should be
-kept small and clean to make it easy for you to dig into it and customize it
-for your needs.
+The sole purpose of sxiv is to be the perfect image viewer for me. It is free
+software so that you can use it and modify it for your needs. Please file a bug
+report if something does not work as documented or expected. Contributions are
+welcome but there is no guarantee that they will be incorporated.
 
 
 Features
@@ -98,6 +97,13 @@ on GitHub or get a copy using git with the following command:
     git clone https://github.com/muennich/sxiv.git
 
 **Stable releases**
+
+**[v25](https://github.com/muennich/sxiv/archive/v25.tar.gz)**
+*(January 26, 2019)*
+
+  * Support font fallback for missing glyphs
+  * Fix busy loop when built without inotify
+  * Use background/foreground colors from X resource database
 
 **[v24](https://github.com/muennich/sxiv/archive/v24.tar.gz)**
 *(October 27, 2017)*
