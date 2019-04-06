@@ -239,6 +239,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_c,             i_navigate,           +1 },
 	{ 0,            XK_c,             t_move_sel,           DIR_RIGHT },
 	{ 0,            XK_C,             g_clone_image,        1 },
+	{ AltMask,      XK_C,             g_clone_image,        4 },
         { 0,            XK_B,             g_toggle_bar,         None },
         // k
 	{ 0,            XK_m,             g_toggle_image_mark,  None },

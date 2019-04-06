@@ -81,6 +81,7 @@ typedef struct {
 	const char *name; /* as given by user */
 	const char *path; /* always absolute */
 	const char *base;
+        float zoom, xzoom, x, y; /* XXX saved view state */
 	fileflags_t flags;
 } fileinfo_t;
 
