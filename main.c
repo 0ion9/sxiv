@@ -151,6 +151,8 @@ void check_add_file(char *filename, bool given)
 
 	files[fileidx].name = estrdup(filename);
 	files[fileidx].path = path;
+	files[fileidx].zoom = files[fileidx].yzoom = 0;
+	files[fileidx].x = files[fileidx].y = 0;
 	if (given)
 		files[fileidx].flags |= FF_WARN;
 	fileidx++;
@@ -862,6 +864,7 @@ void load_image(int new)
 {
 	bool prev = new < fileidx;
 	static int current;
+	fileinfo_t *oldfile = &files[fileidx];
 
 	if (new < 0 || new >= filecnt)
 		return;
@@ -874,6 +877,14 @@ void load_image(int new)
 		alternate = current;
 
 	img_close(&img, false);
+
+        if (img.synczoom == false) {
+                oldfile->zoom = img.zoom;
+                oldfile->yzoom = img.yzoom;
+                oldfile->x = img.x;
+                oldfile->y = img.y;
+        }
+
 	while (!img_load(&img, &files[new])) {
 		remove_file(new, false);
 		if (new >= filecnt)
@@ -1562,6 +1573,9 @@ int main(int argc, char **argv)
 	}
 	info.fd = -1;
 
+	if (options->synczoom)
+		img.synczoom = true;
+
 	if (options->thumb_mode) {
 		mode = MODE_THUMB;
 		tns_init(&tns, files, &filecnt, &fileidx, &win);
@@ -1572,6 +1586,7 @@ int main(int argc, char **argv)
 		tns.thumbs = NULL;
 		load_image(fileidx);
 	}
+
 	win_open(&win);
 	win_set_cursor(&win, CURSOR_WATCH);
 

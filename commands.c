@@ -125,6 +125,12 @@ bool cg_toggle_bar(arg_t _)
 	return true;
 }
 
+bool cg_toggle_synczoom(arg_t _)
+{
+	img_toggle_synczoom(&img);
+	return true;
+}
+
 bool cg_prefix_external(arg_t _)
 {
 	extprefix = true;

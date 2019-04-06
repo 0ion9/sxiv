@@ -119,6 +119,7 @@ typedef enum {
 typedef struct {
 	const char *name; /* as given by user */
 	const char *path; /* always absolute */
+	float zoom, yzoom, x, y;
 	fileflags_t flags;
 } fileinfo_t;
 
@@ -222,6 +223,7 @@ struct img {
 	float zoom;
 	float yzoom; /* always equals zoom except in distort mode, where fit is done on width 
           and then yzoom is set to fill the window vertically. */
+	bool synczoom;
 
 	bool checkpan;
 	bool dirty;
@@ -265,6 +267,7 @@ bool img_fit_win(img_t*, scalemode_t);
 bool img_zoom(img_t*, float);
 bool img_zoom_in(img_t*, int);
 bool img_zoom_out(img_t*, int);
+bool img_toggle_synczoom(img_t*);
 bool img_pos(img_t*, float, float);
 bool img_move(img_t*, float, float);
 bool img_pan(img_t*, direction_t, int);
@@ -298,6 +301,7 @@ struct opt {
 	/* image: */
 	scalemode_t scalemode;
 	float zoom;
+	bool synczoom;
 	bool animate;
 	int gamma;
 	int slideshow;

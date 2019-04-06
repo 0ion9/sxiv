@@ -149,6 +149,7 @@ static const keymap_t keys[] = {
 	{ AltMask,      XK_minus,         i_fit_to_win,         SCALE_DOWN },
 	{ 0,            XK_emdash,        i_flip,               FLIP_VERTICAL },
 	{ ControlMask,  XK_plus,          i_set_zoom,           100 },
+	{ AltMask,      XK_equal,         g_toggle_synczoom,    None },
 	{ 0,            XK_underscore,    i_fit_to_win,         SCALE_FIT },
 	{ ControlMask,  XK_minus,         i_fit_to_win,         SCALE_WIDTH },
 	{ ControlMask,  XK_underscore,    i_fit_to_win,         SCALE_HEIGHT },

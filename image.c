@@ -66,6 +66,7 @@ void img_init(img_t *img, win_t *win)
 	img->zoom = MAX(img->zoom, zoom_min);
 	img->zoom = MIN(img->zoom, zoom_max);
 	img->yzoom = img->zoom;
+	img->synczoom = false;
 	img->checkpan = false;
 	img->dirty = false;
 	img->aa = ANTI_ALIAS;
@@ -354,6 +355,15 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	}
 	img->w = imlib_image_get_width();
 	img->h = imlib_image_get_height();
+        /* view locking changes*/
+        if ((img->synczoom == false) && (file->zoom > 0)) {
+		img->zoom = file->zoom;
+		img->yzoom = file->yzoom;
+		img->x = file->x;
+		img->y = file->y;
+	}
+
+
 	img->checkpan = true;
 	img->dirty = true;
 	img->tile.dirty_cache = true;
@@ -1155,6 +1165,12 @@ bool img_zoom_out(img_t *img, int amount)
                 if (amount == 0)
 			return img_zoom(img, z);
 	}
+	return false;
+}
+
+bool img_toggle_synczoom(img_t *img)
+{
+	img->synczoom = ! img->synczoom;
 	return false;
 }
 
