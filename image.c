@@ -44,6 +44,8 @@ static int zoomdiff(img_t *img, float z)
 	return (int) ((img->w * z - img->w * (img->zoom * img->wmul)) + (img->h * z - img->h * (img->zoom * img->hmul)));
 }
 
+void set_view_current_file(float x, float y, float zoom, float yzoom);
+
 void img_update_colormodifiers_current(img_t *);
 void img_update_colormodifiers_none(img_t *);
 
@@ -395,6 +397,7 @@ CLEANUP void img_close(img_t *img, bool decache)
 			imlib_free_image();
 		img->im = NULL;
 	}
+	set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
 }
 
 bool img_active_colormods(img_t *img)
@@ -478,8 +481,11 @@ void img_check_pan(img_t *img, bool moved)
 		}
 	}
 
-	if (!moved && (ox != img->x || oy != img->y))
+	if (!moved && (ox != img->x || oy != img->y)) {
 		img->dirty = true;
+		set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
+	}
+
 	//warn("check_pan final x,y = %f, %f", img->x, img->y);
 }
 

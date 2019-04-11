@@ -128,7 +128,7 @@ void cleanup(void)
 		free(index_array);
 }
 
-void check_add_file(char *filename, bool given)
+void check_add_file(char *filename, bool given, float x, float y, float zoom)
 {
 	char *path;
 
@@ -151,11 +151,22 @@ void check_add_file(char *filename, bool given)
 
 	files[fileidx].name = estrdup(filename);
 	files[fileidx].path = path;
-	files[fileidx].zoom = files[fileidx].yzoom = 0;
-	files[fileidx].x = files[fileidx].y = 0;
+	files[fileidx].zoom = zoom;
+        files[fileidx].yzoom = zoom;
+	files[fileidx].x = x;
+        files[fileidx].y = y;
 	if (given)
 		files[fileidx].flags |= FF_WARN;
 	fileidx++;
+}
+
+void set_view_current_file(float x, float y, float zoom, float yzoom)
+{
+	files[fileidx].x = x;
+	files[fileidx].y = y;
+	files[fileidx].zoom = zoom;
+	files[fileidx].yzoom = yzoom;
+
 }
 
 // copy astartcount entries from a, followed by bcount entries from b, followed by aendcount entries from a, into dest
@@ -864,7 +875,6 @@ void load_image(int new)
 {
 	bool prev = new < fileidx;
 	static int current;
-	fileinfo_t *oldfile = &files[fileidx];
 
 	if (new < 0 || new >= filecnt)
 		return;
@@ -877,13 +887,6 @@ void load_image(int new)
 		alternate = current;
 
 	img_close(&img, false);
-
-        if (img.synczoom == false) {
-                oldfile->zoom = img.zoom;
-                oldfile->yzoom = img.yzoom;
-                oldfile->x = img.x;
-                oldfile->y = img.y;
-        }
 
 	while (!img_load(&img, &files[new])) {
 		remove_file(new, false);
@@ -1505,7 +1508,8 @@ int main(int argc, char **argv)
 		while ((len = getline(&filename, &n, stdin)) > 0) {
 			if (filename[len-1] == '\n')
 				filename[len-1] = '\0';
-			check_add_file(filename, true);
+			// if \t in filename, add with options
+			check_add_file(filename, true, 0, 0, 1.0);
 		}
 		free(filename);
 	}
@@ -1518,7 +1522,7 @@ int main(int argc, char **argv)
 			continue;
 		}
 		if (!S_ISDIR(fstats.st_mode)) {
-			check_add_file(filename, true);
+			check_add_file(filename, true, 0, 0, 1.0);
 		} else {
 			if (r_opendir(&dir, filename, options->recursive) < 0) {
 				error(0, errno, "%s", filename);
@@ -1526,7 +1530,7 @@ int main(int argc, char **argv)
 			}
 			start = fileidx;
 			while ((filename = r_readdir(&dir, true)) != NULL) {
-				check_add_file(filename, false);
+				check_add_file(filename, false, 0, 0, 1.0);
 				free((void*) filename);
 			}
 			r_closedir(&dir);

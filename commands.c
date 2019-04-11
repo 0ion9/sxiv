@@ -63,8 +63,6 @@ extern bool extprefix;
 
 static void write_entry(const char *filename, bool extended, float x, float y, float zoom)
 {
-	if (zoom == 0)
-		zoom = 1.0;
 	if (extended) {
 		printf("%s\tx=%.2f,y=%.2f,zoom=%.2f\n", filename, x, y, zoom * 100.0);
 	} else {
