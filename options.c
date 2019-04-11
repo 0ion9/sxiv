@@ -54,6 +54,7 @@ void parse_options(int argc, char **argv)
 	_options.all_to_stdout = false;
 	_options.recursive = false;
 	_options.startnum = 0;
+	_options.extended_filelist = false;
 
 	_options.scalemode = SCALE_DOWN;
 	_options.zoom = 1.0;
@@ -75,7 +76,7 @@ void parse_options(int argc, char **argv)
 	_options.clean_cache = false;
 	_options.private_mode = false;
 
-	while ((opt = getopt(argc, argv, "A:abce:fG:g:himMn:N:oOpqrS:s:tvVZz:")) != -1) {
+	while ((opt = getopt(argc, argv, "A:abce:fG:g:himMn:N:oOpqrS:s:tvVxZz:")) != -1) {
 		switch (opt) {
 			case '?':
 				print_usage();
@@ -171,6 +172,9 @@ void parse_options(int argc, char **argv)
 				exit(EXIT_SUCCESS);
 			case 'V':
 				_options.synczoom = false;
+				break;
+			case 'x':
+				_options.extended_filelist = true;
 				break;
 			case 'Z':
 				_options.scalemode = SCALE_ZOOM;

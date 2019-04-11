@@ -63,8 +63,10 @@ extern bool extprefix;
 
 static void write_entry(const char *filename, bool extended, float x, float y, float zoom)
 {
+	if (zoom == 0)
+		zoom = 1.0;
 	if (extended) {
-		printf("%s\n", "Stubbed: write_entry(..extended=true..)");
+		printf("%s\tx=%.2f,y=%.2f,zoom=%.2f\n", filename, x, y, zoom * 100.0);
 	} else {
 		printf("%s\n", filename);
 	}
@@ -77,12 +79,12 @@ bool cg_quit(arg_t _)
 	if (options->to_stdout && markcnt > 0) {
 		for (i = 0; i < filecnt; i++) {
 			if (files[i].flags & FF_MARK)
-				write_entry(files[i].name, false, files[i].x, files[i].y, files[i].zoom);
+				write_entry(files[i].name, options->extended_filelist, files[i].x, files[i].y, files[i].zoom );
 		}
 	}
 	if (options->all_to_stdout) {
 		for (i = 0; i < filecnt; i++)
-			write_entry(files[i].name, false, files[i].x, files[i].y, files[i].zoom);
+			write_entry(files[i].name, options->extended_filelist, files[i].x, files[i].y, files[i].zoom);
 	}
 	exit(EXIT_SUCCESS);
 }
@@ -213,7 +215,7 @@ bool cg_insert_from_clipboard(arg_t _)
 
 	/* STUBBED until insert_files is actually implemented *?
 //	insert_files(pathlist, npaths);
-	/* note -- this assumes insert_files will reuse the strings rather than allocating copies
+	 note -- this assumes insert_files will reuse the strings rather than allocating copies
 */
 	free(pathlist);
 	/* Will depend on xsel. Obtain data via "xsel -ob".

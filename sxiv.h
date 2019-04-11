@@ -294,6 +294,7 @@ struct opt {
 	bool from_stdin;
 	bool to_stdout;
         bool all_to_stdout;
+	bool extended_filelist;
 	bool recursive;
 	int filecnt;
 	int startnum;
