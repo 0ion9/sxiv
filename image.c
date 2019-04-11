@@ -358,17 +358,15 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	img->w = imlib_image_get_width();
 	img->h = imlib_image_get_height();
         /* view locking changes*/
-	img->checkpan = true;
         if ((img->synczoom == false) && (file->zoom != 0)) {
 //		printf ("setting img x,y,z = %f,%f,%f\n", file->x, file->y, file->zoom);
 		img->zoom = file->zoom;
 		img->yzoom = file->yzoom;
 		img->x = file->x;
 		img->y = file->y;
-		img->checkpan = false;
 	}
 
-
+	img->checkpan = true;
 	img->dirty = true;
 	img->tile.dirty_cache = true;
 
