@@ -175,6 +175,7 @@ void parse_options(int argc, char **argv)
 				break;
 			case 'x':
 				_options.extended_filelist = true;
+				_options.scalemode = SCALE_ZOOM;
 				break;
 			case 'Z':
 				_options.scalemode = SCALE_ZOOM;
