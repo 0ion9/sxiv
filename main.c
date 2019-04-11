@@ -152,8 +152,10 @@ void check_add_file(char *filename, bool given, float x, float y, float zoom)
 	files[fileidx].name = estrdup(filename);
 	files[fileidx].path = path;
 	files[fileidx].zoom = zoom;
+//	printf("setting zoom for %s to %.2f\n", files[fileidx].name,files[fileidx].zoom);
         files[fileidx].yzoom = zoom;
 	files[fileidx].x = x;
+//	printf("setting x for %s to %.2f\n", files[fileidx].name,files[fileidx].x);
         files[fileidx].y = y;
 	if (given)
 		files[fileidx].flags |= FF_WARN;
@@ -162,6 +164,7 @@ void check_add_file(char *filename, bool given, float x, float y, float zoom)
 
 void set_view_current_file(float x, float y, float zoom, float yzoom)
 {
+//	printf("svcf: x, y, z = %f,%f,%f", x,y,zoom);
 	files[fileidx].x = x;
 	files[fileidx].y = y;
 	files[fileidx].zoom = zoom;
