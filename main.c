@@ -169,6 +169,64 @@ void set_view_current_file(float x, float y, float zoom, float yzoom)
 
 }
 
+void read_fileinfo(char *line, char **filename, float *x, float *y, float *zoom)
+{
+	char *xparams;
+	bool more=true;
+	int consumed;
+	float buffer;
+	char name[20];
+	xparams = strchr(line, '\t');
+	*x = 0;
+	*y = 0;
+	*zoom = options->zoom;
+	*filename = line;
+	if (xparams == NULL)
+		return;
+	*xparams = '\0';
+	xparams++;
+
+	/* indicating xparams with a tab, but giving no actual parameters is legal, if silly. */
+	if ((*xparams) == '\0')
+		return;
+
+	while (more) {
+		consumed = sscanf(xparams, "%9[a-z]=%f", name, &buffer);
+//		printf("consumed=%d\n", consumed);
+		if (consumed < 1) {
+			more = false;
+//			printf("Xparams: '%s' failed to parse; consumed=%d\n", xparams, consumed);
+		} else {
+//			printf("Xparams: '%s' parsed %d fields ok; name=%s; buf=%f\n", xparams, consumed, name, buffer);
+		}
+		if (more == true){
+//			printf("more y; next xparams is %s'\n", strchr(xparams, ','));
+			xparams = strchr(xparams, ',');
+			if (xparams == NULL)
+				more = false;
+		}
+		if (strcmp(name, "x") == 0)
+		{
+//			printf("setting %s\n", "x");
+			*x = buffer;
+		} else if (strcmp(name, "y") == 0) {
+			*y = buffer;
+//			printf("setting %s\n", "y");
+		} else if (strcmp(name, "zoom") == 0) {
+//			printf("setting %s\n", "zoom");
+			*zoom = buffer / 100.0;
+		}
+		if (xparams == NULL)
+			return;
+		if ((*xparams) != '\0')
+			xparams++;
+//		printf("xparams is now '%s'\n", xparams);
+		// XXX warn on unknown param, rather than silently consuming.
+		if ((*xparams) == '\0')
+			more = false;
+	}
+}
+
 // copy astartcount entries from a, followed by bcount entries from b, followed by aendcount entries from a, into dest
 // aendcount or astartcount may be 0 (but they may not both be 0)
 
@@ -1470,7 +1528,9 @@ int main(int argc, char **argv)
 	int i, start;
 	size_t n;
 	ssize_t len;
+        char *line;
 	char *filename;
+        float x, y, zoom;
 	const char *homedir, *dsuffix = "";
 	struct stat fstats;
 	r_dir_t dir;
@@ -1504,14 +1564,27 @@ int main(int argc, char **argv)
 
 	if (options->from_stdin) {
 		n = 0;
-		filename = NULL;
-		while ((len = getline(&filename, &n, stdin)) > 0) {
-			if (filename[len-1] == '\n')
-				filename[len-1] = '\0';
-			// if \t in filename, add with options
-			check_add_file(filename, true, 0, 0, 1.0);
+		line = NULL;
+                // XXX check for memleak of line..
+		// filename won't be leaked because it's always a subset of
+		// line, and we do some shenanigans to avoid additional allocation.
+		while ((len = getline(&line, &n, stdin)) > 0) {
+			if (line[len-1] == '\n')
+				line[len-1] = '\0';
+			read_fileinfo(line, &filename, &x, &y, &zoom);
+//			printf("+%s (%.2f,%.2f,%.2f)\n", filename, x, y, zoom);
+			check_add_file(filename, true, x, y, zoom);
 		}
-		free(filename);
+		if (n>0) {
+			x = files[0].x;
+			y = files[0].y;
+			zoom = files[0].zoom;
+		}
+		else {
+			zoom = options->zoom;
+		}
+
+		free(line);
 	}
 
 	for (i = 0; i < options->filecnt; i++) {
@@ -1554,8 +1627,17 @@ int main(int argc, char **argv)
 	}
 
 	win_init(&win);
-	img_init(&img, &win);
+	img_init(&img, &win, zoom);
 	arl_init(&arl);
+
+	if ((x != 0) || (y != 0) || (zoom != (options->zoom / 100.))) {
+//		printf("enforcing img x,y,z=%f,%f,%f\n", x, y, zoom);
+		img.zoom = zoom;
+		img.checkpan = true;
+		img.dirty=true;
+		img.x = x;
+		img.y = y;
+	}
 
 	if ((homedir = getenv("XDG_CONFIG_HOME")) == NULL || homedir[0] == '\0') {
 		homedir = getenv("HOME");

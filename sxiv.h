@@ -259,7 +259,7 @@ struct img {
 	multi_img_t multi;
 };
 
-void img_init(img_t*, win_t*);
+void img_init(img_t*, win_t*, float);
 bool img_load(img_t*, const fileinfo_t*);
 CLEANUP void img_close(img_t*, bool);
 void img_render(img_t*);

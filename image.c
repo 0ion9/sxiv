@@ -49,7 +49,7 @@ void set_view_current_file(float x, float y, float zoom, float yzoom);
 void img_update_colormodifiers_current(img_t *);
 void img_update_colormodifiers_none(img_t *);
 
-void img_init(img_t *img, win_t *win)
+void img_init(img_t *img, win_t *win, float zoom)
 {
 	int i;
 	zoom_min = zoom_levels[0] / 100.0;
@@ -64,11 +64,11 @@ void img_init(img_t *img, win_t *win)
 	img->wmul = 1;
 	img->hmul = 1;
 	img->scalemode = options->scalemode;
-	img->zoom = options->zoom;
+	img->zoom = zoom;
 	img->zoom = MAX(img->zoom, zoom_min);
 	img->zoom = MIN(img->zoom, zoom_max);
 	img->yzoom = img->zoom;
-	img->synczoom = false;
+	img->synczoom = options->synczoom;
 	img->checkpan = false;
 	img->dirty = false;
 	img->aa = ANTI_ALIAS;
@@ -358,15 +358,17 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	img->w = imlib_image_get_width();
 	img->h = imlib_image_get_height();
         /* view locking changes*/
-        if ((img->synczoom == false) && (file->zoom > 0)) {
+	img->checkpan = true;
+        if ((img->synczoom == false) && (file->zoom != 0)) {
+//		printf ("setting img x,y,z = %f,%f,%f\n", file->x, file->y, file->zoom);
 		img->zoom = file->zoom;
 		img->yzoom = file->yzoom;
 		img->x = file->x;
 		img->y = file->y;
+		img->checkpan = false;
 	}
 
 
-	img->checkpan = true;
 	img->dirty = true;
 	img->tile.dirty_cache = true;
 
@@ -397,6 +399,7 @@ CLEANUP void img_close(img_t *img, bool decache)
 			imlib_free_image();
 		img->im = NULL;
 	}
+//	printf("cleanup:\n");
 	set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
 }
 
@@ -483,7 +486,8 @@ void img_check_pan(img_t *img, bool moved)
 
 	if (!moved && (ox != img->x || oy != img->y)) {
 		img->dirty = true;
-		set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
+//		printf("check_pan, with x,y,z=%f,%f,%f\n", img->x, img->y, img->zoom);
+		//set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
 	}
 
 	//warn("check_pan final x,y = %f, %f", img->x, img->y);
