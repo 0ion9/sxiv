@@ -61,6 +61,15 @@ extern int markidx;
 extern int prefix;
 extern bool extprefix;
 
+static void write_entry(const char *filename, bool extended, float x, float y, float zoom)
+{
+	if (extended) {
+		printf("%s\n", "Stubbed: write_entry(..extended=true..)");
+	} else {
+		printf("%s\n", filename);
+	}
+}
+
 bool cg_quit(arg_t _)
 {
 	unsigned int i;
@@ -68,12 +77,12 @@ bool cg_quit(arg_t _)
 	if (options->to_stdout && markcnt > 0) {
 		for (i = 0; i < filecnt; i++) {
 			if (files[i].flags & FF_MARK)
-				printf("%s\n", files[i].name);
+				write_entry(files[i].name, false, files[i].x, files[i].y, files[i].zoom);
 		}
 	}
 	if (options->all_to_stdout) {
 		for (i = 0; i < filecnt; i++)
-			printf("%s\n", files[i].name);
+			write_entry(files[i].name, false, files[i].x, files[i].y, files[i].zoom);
 	}
 	exit(EXIT_SUCCESS);
 }
