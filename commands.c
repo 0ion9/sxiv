@@ -61,6 +61,8 @@ extern int markidx;
 extern int prefix;
 extern bool extprefix;
 
+void set_view_current_file(float x, float y, float zoom, float yzoom);
+
 static void write_entry(const char *filename, bool extended, float x, float y, float zoom)
 {
 	if (extended) {
@@ -93,6 +95,7 @@ bool cg_switch_mode(arg_t _)
 		if (tns.thumbs == NULL)
 			tns_init(&tns, files, &filecnt, &fileidx, &win);
 		img_close(&img, false);
+		set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
 		reset_timeout(reset_cursor);
 		if (img.ss.on) {
 			img.ss.on = false;
@@ -101,7 +104,11 @@ bool cg_switch_mode(arg_t _)
 		tns.dirty = true;
 		mode = MODE_THUMB;
 	} else {
+//		printf ("T2I: %.2f, %.2f, %.2f\n", img.zoom, img.x, img.y);
+//		printf ("    %.2f, %.2f, %.2f\n", files[fileidx].zoom, files[fileidx].x,files[fileidx].y);
 		load_image(fileidx);
+//		printf ("T2I[2]: %.2f, %.2f, %.2f\n", img.zoom, img.x, img.y);
+//		printf ("    %.2f, %.2f, %.2f\n", files[fileidx].zoom, files[fileidx].x,files[fileidx].y);
 		mode = MODE_IMAGE;
 	}
 	return true;
@@ -441,22 +448,31 @@ bool cg_n_or_last(arg_t _)
 
 bool cg_scroll_screen(arg_t dir)
 {
-	if (mode == MODE_IMAGE)
-		return img_pan(&img, dir, -1);
-	else
-		return tns_scroll(&tns, dir, true);
+	bool tmp;
+	if (mode == MODE_IMAGE) {
+		tmp = img_pan(&img, dir, -1);
+		if (tmp)
+			set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
+	} else
+		tmp= tns_scroll(&tns, dir, true);
+	return tmp;
 }
 
 bool cg_zoom(arg_t d)
 {
+	bool tmp;
 	if (mode == MODE_THUMB)
 		return tns_zoom(&tns, d);
-	else if (d > 0)
-		return img_zoom_in(&img, d);
-	else if (d < 0)
-		return img_zoom_out(&img, 0 - d);
-	else
-		return false;
+	else {
+		if (d > 0)
+			tmp = img_zoom_in(&img, d);
+		else if (d < 0)
+			tmp= img_zoom_out(&img, 0 - d);
+		set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
+		return tmp;
+	}
+
+	return false;
 }
 
 bool cg_toggle_image_mark(arg_t _)
@@ -681,19 +697,24 @@ bool ci_drag(arg_t mode)
 		y = e.xmotion.y;
 	}
 	set_timeout(reset_cursor, TO_CURSOR_HIDE, true);
-	reset_cursor();
-
+	set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
 	return true;
 }
 
 bool ci_set_zoom(arg_t zl)
 {
-	return img_zoom(&img, (prefix ? prefix : zl) / 100.0);
+	bool tmp = img_zoom(&img, (prefix ? prefix : zl) / 100.0);
+	if (tmp)
+		set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
+	return tmp;
 }
 
 bool ci_fit_to_win(arg_t sm)
 {
-	return img_fit_win(&img, sm);
+	bool tmp = img_fit_win(&img, sm);
+	if (tmp)
+		set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
+	return tmp;
 }
 
 bool ci_rotate(arg_t degree)
@@ -751,6 +772,7 @@ bool ci_cycle_scalefactor(arg_t s)
 		img.dirty = true;
 		img.checkpan = true;
 	}
+	set_view_current_file(img.x, img.y, img.zoom, img.yzoom);
 	return true;
 }
 

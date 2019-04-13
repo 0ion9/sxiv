@@ -152,24 +152,25 @@ void check_add_file(char *filename, bool given, float x, float y, float zoom)
 	files[fileidx].name = estrdup(filename);
 	files[fileidx].path = path;
 	files[fileidx].zoom = zoom;
-//	printf("setting zoom for %s to %.2f\n", files[fileidx].name,files[fileidx].zoom);
         files[fileidx].yzoom = zoom;
 	files[fileidx].x = x;
-//	printf("setting x for %s to %.2f\n", files[fileidx].name,files[fileidx].x);
         files[fileidx].y = y;
 	if (given)
 		files[fileidx].flags |= FF_WARN;
-	fileidx++;
+	fileidx+=1;
+//        printf("}cfa\n");
 }
 
 void set_view_current_file(float x, float y, float zoom, float yzoom)
 {
-//	printf("svcf: x, y, z = %f,%f,%f", x,y,zoom);
-	files[fileidx].x = x;
-	files[fileidx].y = y;
-	files[fileidx].zoom = zoom;
-	files[fileidx].yzoom = yzoom;
-
+//	printf("svcf[%d]: x, y, z was %f,%f,%f, now  %f,%f,%f", fileidx, files[fileidx].x, \
+//		files[fileidx].y, files[fileidx].zoom, x,y,zoom);
+	if (img.synczoom == false){
+		files[fileidx].x = x;
+		files[fileidx].y = y;
+		files[fileidx].zoom = zoom;
+		files[fileidx].yzoom = yzoom;
+	}
 }
 
 void read_fileinfo(char *line, char **filename, float *x, float *y, float *zoom)
@@ -959,6 +960,13 @@ void load_image(int new)
 	files[new].flags &= ~FF_WARN;
 	fileidx = current = new;
 
+        if (img.synczoom == false) {
+		img.x = files[current].x;
+		img.y = files[current].y;
+		img.zoom = files[current].zoom;
+		img.yzoom = files[current].yzoom;
+	}
+
 	close_info();
 	open_info();
 	arl_setup(&arl, files[fileidx].path);
@@ -1574,10 +1582,18 @@ int main(int argc, char **argv)
 		while ((len = getline(&line, &n, stdin)) > 0) {
 			if (line[len-1] == '\n')
 				line[len-1] = '\0';
+                        if (len == 1) {
+//				printf("1:len=%d line=%s\n", len, line);
+				continue;
+			}
+			x=y=0;
+			zoom=1.0;
+//			printf("len=%d line=%s\n", len, line);
 			read_fileinfo(line, &filename, &x, &y, &zoom);
 //			printf("+%s (%.2f,%.2f,%.2f)\n", filename, x, y, zoom);
 			check_add_file(filename, true, x, y, zoom);
 		}
+//		printf ("exiting stdin loop\n");
 		if (n>0) {
 			x = files[0].x;
 			y = files[0].y;
@@ -1588,28 +1604,34 @@ int main(int argc, char **argv)
 		}
 
 		free(line);
+//		printf ("freed line\n");
 	}
 
 	for (i = 0; i < options->filecnt; i++) {
-		filename = options->filenames[i];
-
+//		filename = options->filenames[i];
+		x=y=0;
+		zoom=1.0;
+		read_fileinfo(options->filenames[i], &filename, &x, &y, &zoom);
 		if (stat(filename, &fstats) < 0) {
 			error(0, errno, "%s", filename);
 			continue;
 		}
 		if (!S_ISDIR(fstats.st_mode)) {
-			check_add_file(filename, true, 0, 0, 1.0);
+			check_add_file(filename, true, x, y, zoom);
 		} else {
 			if (r_opendir(&dir, filename, options->recursive) < 0) {
 				error(0, errno, "%s", filename);
 				continue;
 			}
 			start = fileidx;
+			// recursively opening a directory with xparams specified
+                        // causes all files in that directory to be assigned those same xparams.
 			while ((filename = r_readdir(&dir, true)) != NULL) {
-				check_add_file(filename, false, 0, 0, 1.0);
+				check_add_file(filename, false, x, y, zoom);
 				free((void*) filename);
 			}
 			r_closedir(&dir);
+
 			if (fileidx - start > 1)
 				qsort(files + start, fileidx - start, sizeof(fileinfo_t), fncmp);
 		}
@@ -1633,9 +1655,15 @@ int main(int argc, char **argv)
 	img_init(&img, &win, zoom);
 	arl_init(&arl);
 
+        x = files[fileidx].x;
+        y = files[fileidx].y;
+        zoom = files[fileidx].zoom;
+	if (zoom == 0)
+		zoom = 1.0;
+
 	if ((x != 0) || (y != 0) || (zoom != (options->zoom / 100.))) {
 //		printf("enforcing img x,y,z=%f,%f,%f\n", x, y, zoom);
-		img.zoom = zoom;
+		img.zoom = img.yzoom = zoom;
 		img.checkpan = true;
 		img.dirty=true;
 		img.x = x;

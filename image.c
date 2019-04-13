@@ -358,10 +358,12 @@ bool img_load(img_t *img, const fileinfo_t *file)
 	img->w = imlib_image_get_width();
 	img->h = imlib_image_get_height();
         /* view locking changes*/
-        if ((img->synczoom == false) && (file->zoom != 0)) {
+        if ((img->synczoom == false)) {
 //		printf ("setting img x,y,z = %f,%f,%f\n", file->x, file->y, file->zoom);
-		img->zoom = file->zoom;
-		img->yzoom = file->yzoom;
+		if (file->zoom != 0)
+			img->zoom = file->zoom;
+		if (file->yzoom != 0)
+			img->yzoom = file->yzoom;
 		img->x = file->x;
 		img->y = file->y;
 	}
@@ -397,8 +399,6 @@ CLEANUP void img_close(img_t *img, bool decache)
 			imlib_free_image();
 		img->im = NULL;
 	}
-//	printf("cleanup:\n");
-	set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
 }
 
 bool img_active_colormods(img_t *img)
@@ -484,8 +484,6 @@ void img_check_pan(img_t *img, bool moved)
 
 	if (!moved && (ox != img->x || oy != img->y)) {
 		img->dirty = true;
-//		printf("check_pan, with x,y,z=%f,%f,%f\n", img->x, img->y, img->zoom);
-		//set_view_current_file(img->x, img->y, img->zoom, img->yzoom);
 	}
 
 	//warn("check_pan final x,y = %f, %f", img->x, img->y);
