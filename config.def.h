@@ -8,8 +8,9 @@ enum {
 	WIN_HEIGHT = 600
 };
 
-/* bar font:
- * (see fonts-conf(5) subsection "FONT NAMES" for valid values)
+/* colors and font are configured with 'background', 'foreground' and
+ * 'font' X resource properties.
+ * See X(7) section Resources and xrdb(1) for more information.
  */
 static const char * const BAR_FONT = "unifont:size=10";
 
