@@ -207,8 +207,8 @@ static const keymap_t keys[] = {
 	{ 0,            XK_s,             g_navigate_marked,    -1 },
 //	{ 0,            XK_s,             i_navigate,           -10 },
 //	{ 0,            XK_s,             g_scroll_screen,      DIR_UP },
-	{ 0          ,  XK_S,             g_cycle_silhouetting, None },
-	{ ControlMask,  XK_S,             i_slideshow,          None },
+	{ 0,            XK_S,             g_cycle_silhouetting, None },
+	{ 0,            XK_w,             i_slideshow,          None },
         // xxx fallback doesn't always occur correctly.
 	{ 0,            XK_t,             g_navigate_marked,    +1 },
 //	{ 0,            XK_t,             i_navigate,           +10 },
