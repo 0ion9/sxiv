@@ -71,7 +71,8 @@ typedef enum {
 	DIR_LEFT  = 1,
 	DIR_RIGHT = 2,
 	DIR_UP    = 4,
-	DIR_DOWN  = 8
+	DIR_DOWN  = 8,
+	DIR_RANDOM = 16
 } direction_t;
 
 typedef enum {

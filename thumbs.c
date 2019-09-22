@@ -682,6 +682,11 @@ int tns_move_selection(tns_t *tns, direction_t dir, int cnt)
 		case DIR_RIGHT:
 			*tns->sel = MIN(*tns->sel + cnt, *tns->cnt - 1);
 			break;
+		case DIR_RANDOM:
+			max = tns->cols * ((*tns->cnt - 1) / tns->cols) +
+			      MIN((*tns->cnt - 1) % tns->cols, *tns->sel % tns->cols);
+			*tns->sel = MIN(max, random() / (float) (RAND_MAX / ((float)max+1)));
+			break;
 	}
 
 	if (*tns->sel != old) {

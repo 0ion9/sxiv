@@ -450,6 +450,7 @@ bool cg_scroll_screen(arg_t dir)
 {
 	bool tmp;
 	if (mode == MODE_IMAGE) {
+		/* XXX need a way to expose RANDOM(1/PAN_FRAC | npixels) */
 		tmp = img_pan(&img, dir, -1);
 		if (tmp)
 			set_view_current_file(img.x, img.y, img.zoom, img.yzoom);

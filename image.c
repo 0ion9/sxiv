@@ -1192,6 +1192,7 @@ bool img_pos(img_t *img, float x, float y)
 
 	img_check_pan(img, true);
 
+        error(0, 0, "img_pos final x,y = %f, %f", img->x, img->y);
 	if (ox != img->x || oy != img->y) {
 		img->dirty = true;
 		return true;
@@ -1212,6 +1213,7 @@ bool img_pan(img_t *img, direction_t dir, int d)
 	 * d > 0: num of pixels
 	 */
 	float x, y;
+        bool relative = true;
 
 	if (d > 0) {
 		x = y = MAX(1, (float) d * img->zoom);
@@ -1229,6 +1231,37 @@ bool img_pan(img_t *img, direction_t dir, int d)
 			return img_move(img, 0.0, y);
 		case DIR_DOWN:
 			return img_move(img, 0.0, -y);
+		case DIR_RANDOM:
+			if (d < 0) {
+				x = (float) (img->win->w - (img->w * img->zoom * img->wmul));
+				y = (float) (img->win->h - (img->h * img->zoom * img->hmul));
+				relative = false;
+			}
+
+			x = (float) random() / (float) (RAND_MAX / x);
+			y = (float) random() / (float) (RAND_MAX / y);
+                        error(0, 0, "x,y = %f, %f", x, y);
+			if (relative == true) {
+				if ((random() & 255) > 127)
+					x = -x;
+				if ((random() & 255) > 127)
+					y = -y;
+				return img_move(img, x, y);
+			} else {
+				return img_pos(img, x, y);
+			}
+/*                        x = (float) random() / (float) (RAND_MAX / img->w);
+                        y = (float) random() / (float) (RAND_MAX / img->h);
+			x = x * img->zoom * img->wmul;
+			y = y * img->zoom * img->hmul;*/
+			/* Why does this work? positive coords claim to just get clipped to 0 by
+                           img_pos, so unconditional negative seems correct, but randomization
+                           travels only over top left quadrant if I do that. */
+/*			if ((random() & 255) > 127)
+				x = -x;
+			if ((random() & 255) > 127)
+				y = -y;*/
+
 	}
 	return false;
 }
