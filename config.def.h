@@ -193,6 +193,10 @@ static const keymap_t keys[] = {
 	{ ControlMask,  XK_Delete,        g_remove_marked,      None },
         // End
         // PgDn
+        { 0,            XK_Next,          g_scroll_screen,      DIR_RANDOM },
+        { 0,            XK_Next,          t_move_sel,           DIR_RANDOM },
+        { 0,            XK_Prior,         g_scroll_screen,      DIR_RANDOM },
+        { 0,            XK_Prior,         t_move_sel,           DIR_RANDOM },
         // KP_AltMask
         // KP_Up
 	{ 0,            XK_KP_Prior,      i_navigate,           +10 },
