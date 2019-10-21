@@ -290,6 +290,7 @@ static const keymap_t keys[] = {
 	{ ShiftMask,    XK_Left,          i_scroll_to_edge,     DIR_LEFT },
 	{ AltMask|ControlMask, XK_Left,   g_reorder_marked_images,  -1 },
 	{ AltMask|ShiftMask,  XK_Left,    g_reorder_image_to_alternate,      -1 },
+/* sometimes crashes.. */
 	{ ShiftMask|ControlMask, XK_Left, g_reorder_marked_images_to_current,  -1 },
 	{ ControlMask,  XK_X,             g_reorder_marked_images_to_current,  -1 },
 	{ 0,            XK_Down,          i_scroll,             DIR_DOWN },

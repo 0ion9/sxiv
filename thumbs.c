@@ -745,6 +745,9 @@ bool tns_zoom(tns_t *tns, int d)
 			tns->zmultl = MIN(tns->zmultl, ARRLEN(thumbnail_zoom_levels)-1);
 		} else {
 			/* zooming out to a smaller thumb */
+			/* note: this is a case where it is possible that the 'deselection' of a
+			   thumb is drawn with the new size, but the thumb and the space around it
+			   are not yet redrawn.*/
 			tns->zmultl = 0;
 		}
 
