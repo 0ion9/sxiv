@@ -578,7 +578,7 @@ void tns_mark(tns_t *tns, int n, bool mark)
 	if (n >= 0 && n < *tns->cnt && tns->thumbs[n].im != NULL) {
 		win_t *win = tns->win;
 		thumb_t *t = &tns->thumbs[n];
-		unsigned long col = win->fullscreen ? win->black.pixel : win->bg.pixel;
+		unsigned long col = win->bg.pixel;
 		int x,y;
 		int zoom;
 		int fitmul;
@@ -594,7 +594,7 @@ void tns_mark(tns_t *tns, int n, bool mark)
 		win_draw_rect(win, x + 1, y - 1, tns->bw, 1, true, 1, col);
 
 		if (mark)
-			col = win->fullscreen && win->light ? win->bg.pixel : win->fg.pixel;
+			col = win->fg.pixel;
 
 		win_draw_rect(win, x, y, tns->bw + 2, tns->bw + 2, true, 1, col);
 
@@ -608,7 +608,7 @@ void tns_alt(tns_t *tns, int n)
 	if (n >= 0 && n < *tns->cnt && tns->thumbs[n].im != NULL) {
 		win_t *win = tns->win;
 		thumb_t *t = &tns->thumbs[n];
-		unsigned long col = win->fullscreen ? win->fg.pixel : win->bg.pixel;
+		unsigned long col = win->bg.pixel;
 		int x,y;
 		int zoom;
 		int fitmul;
@@ -637,7 +637,7 @@ void tns_highlight(tns_t *tns, int n, bool hl)
 	if (n >= 0 && n < *tns->cnt && tns->thumbs[n].im != NULL) {
 		win_t *win = tns->win;
 		thumb_t *t = &tns->thumbs[n];
-		unsigned long col;
+		unsigned long col = hl ? win->fg.pixel : win->bg.pixel;
 		int oxy = (tns->bw + 1) / 2 + 1, owh = tns->bw + 2;
 		int zoom;
 		int fitmul;
@@ -645,11 +645,6 @@ void tns_highlight(tns_t *tns, int n, bool hl)
 		zoom = thumbnail_zoom_levels[tns->zmultl];
 		fitmul = INTEGER_FIT(t->w, t->h, thumb_sizes[tns->zl]);
 		fitmul = MIN(fitmul, tns->max_scale);
-
-		if (hl)
-			col = win->fullscreen && win->light ? win->bg.pixel : win->fg.pixel;
-		else
-			col = win->fullscreen ? win->black.pixel : win->bg.pixel;
 
 		win_draw_rect(win, t->x - oxy, t->y - oxy,
 		              ((t->w * zoom * fitmul) / 100) + owh, ((t->h * zoom * fitmul) / 100) + owh,
