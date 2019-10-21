@@ -1381,9 +1381,13 @@ void on_buttonpress(XButtonEvent *bev)
 				break;
 			case Button4:
 			case Button5:
-				if (tns_scroll(&tns, bev->button == Button4 ? DIR_UP : DIR_DOWN,
-				               (bev->state & ControlMask) != 0))
+				if (bev->state & ShiftMask !=0) {
+					tns_zoom(&tns, bev->button == Button4 ? 2 : -2);
 					redraw();
+				} else if (tns_scroll(&tns, bev->button == Button4 ? DIR_UP : DIR_DOWN,
+				               (bev->state & ControlMask) != 0)) {
+					redraw();
+				}
 				break;
 		}
 	}

@@ -354,13 +354,14 @@ static const keymap_t keys[] = {
 };
 
 /* mouse button mappings for image mode: */
+/* (thumbnail mappings are hardcoded! */
 static const button_t buttons[] = {
 	/* modifiers    button            function              argument */
 	{ 0,            1,                i_cursor_navigate,    None },
 	{ 0,            2,                i_drag,               DRAG_ABSOLUTE },
 	{ 0,            3,                g_switch_mode,        None },
 	{ 0,            4,                g_zoom,               +1 },
-	{ 0,            5,                g_zoom,               -1 },
+	{ 0,            5,                g_zoom,               -1 }
 };
 
 #endif

@@ -462,9 +462,9 @@ bool cg_scroll_screen(arg_t dir)
 bool cg_zoom(arg_t d)
 {
 	bool tmp;
-	if (mode == MODE_THUMB)
+	if (mode == MODE_THUMB) {
 		return tns_zoom(&tns, d);
-	else {
+	} else {
 		if (d > 0)
 			tmp = img_zoom_in(&img, d);
 		else if (d < 0)
