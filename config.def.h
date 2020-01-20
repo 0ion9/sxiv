@@ -286,7 +286,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_Pointer_Left,  t_move_and_reorder,   DIR_LEFT },
 	{ AltMask,      XK_Left,          t_move_and_reorder,   DIR_LEFT },
 	{ AltMask,      XK_Left,          g_reorder_image,      -9999999 },
-	{ ShiftMask,    XK_Left,          g_reorder_image,      -16 },
+/*	{ ShiftMask,    XK_Left,          g_reorder_image,      -16 }, */
 	{ ShiftMask,    XK_Left,          i_scroll_to_edge,     DIR_LEFT },
 	{ AltMask|ControlMask, XK_Left,   g_reorder_marked_images,  -1 },
 	{ AltMask|ShiftMask,  XK_Left,    g_reorder_image_to_alternate,      -1 },
@@ -304,7 +304,7 @@ static const keymap_t keys[] = {
 	{ 0,            XK_Pointer_Right, t_move_and_reorder,   DIR_RIGHT },
 	{ AltMask,      XK_Right,         t_move_and_reorder,   DIR_RIGHT },
 	{ AltMask,      XK_Right,         g_reorder_image,      9999999 },
-	{ ShiftMask,    XK_Right,         g_reorder_image,      16 },
+/*	{ ShiftMask,    XK_Right,         g_reorder_image,      16 },*/
 /* XXX instead of abusing 'alternate', implement a separate 'target marker' */
 	{ AltMask|ShiftMask,    XK_Right, g_reorder_image_to_alternate,        1 },
 	{ AltMask|ControlMask,  XK_Right, g_reorder_marked_images,             1 },
